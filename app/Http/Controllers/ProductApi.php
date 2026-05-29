@@ -7,7 +7,7 @@ use App\Models\ProductModel;
 use App\Models\Banners;
 use App\Models\Category;
 use App\Models\FlashSale;
-use App\Models\Collab;
+use App\Models\Brand;
 use Carbon\Carbon;
 
 class ProductApi extends Controller
@@ -15,6 +15,7 @@ class ProductApi extends Controller
     /**
      * Display a listing of the resource.
      */
+    /*demo test gọi toàn bộ sp */
     public function index()
     {
         $products = ProductModel::with('images:product_id,id,image', 
@@ -28,6 +29,8 @@ class ProductApi extends Controller
             
         ],200);
     }
+
+    /*gọi banner*/
 
     public function Banner(){
         $banners = Banners::take(3)->get(['id','name', 'image']);
@@ -49,6 +52,8 @@ class ProductApi extends Controller
         ],200);
     }
 
+    /*gọi sp flashsale*/
+
      public function FlashSale(){
         $now = Carbon::now();
        $flashSales = FlashSale::with(['items:id,flash_sale_id,sold,quantity_limit,discount_value,product_id',
@@ -68,6 +73,8 @@ class ProductApi extends Controller
         ],200);
     }
 
+    /*gọi sp bán chạy*/
+
      public function BestSelling(){
         $products = ProductModel::Where('status', 1)->with(['variants:product_id,image','category:id,name'])
                                         ->orderBy('sold', 'desc')
@@ -81,17 +88,17 @@ class ProductApi extends Controller
         ],200);
     }
 
-
+   /*gọi sp nổi bật, điều kiện trong bảng brand có is_feature khác 0*/
     
      public function HotProduct(){
-       $products = ProductModel::whereHas('collab', function ($q) {$q->where('status', 1);})
-                                        ->with(['collab:id,name,slug,banner,collab',
+       $products = ProductModel::whereHas('brand', function ($q) {$q->where('is_featured', 1);})
+                                        ->with(['brand:id,name',
                                                 'variants:product_id,image',
                                                 'category:id,name'
                                                 ])
                                         ->orderBy('sold', 'desc')
                                         ->take(5)
-                                        ->get(['id','name','slug','sold','category_id','collab_id']);
+                                        ->get(['id','name','slug','sold','category_id','brand_id']);
         return response()->json(
         [
             'success' => true,
@@ -100,9 +107,27 @@ class ProductApi extends Controller
         ],200);
     }
 
-     
+    /* lấy chi tiết sp theo id*/
 
-        public function sale(){
+     public function Detail($id){
+        $products = ProductModel::Where('id', $id)->with(['brand:id,name','image:id,product_id,image',
+                                                'variants:product_id,image,price,stock,color_id,size_id',
+                                                'category:id,name',
+                                                'variants.color:id,name',
+                                                'variants.size:id,name',
+                                                'rating:product_id,rating,comment,created_at,user_id',
+                                                'rating.user:id,name'
+                                                ])->first();
+            return response()->json(
+                [
+                    'success' => true,
+                    'message' => 'chi tiết sp',
+                    'data' => $products,
+                ],200);
+        }   
+     /*  DELL ĐỤNG VÔ OK
+     
+     public function sale(){
         $products = ProductModel::where('sale', '!=', 0)->
                                 orderBy('sale_price', 'desc')
                                 ->take(8)
@@ -150,6 +175,8 @@ class ProductApi extends Controller
             'data' => $data,
     ],200);
     }
+
+*/
 
 
 

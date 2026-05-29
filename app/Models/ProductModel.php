@@ -8,17 +8,15 @@ use App\Models\Images;
 use App\Models\Category;
 use App\Models\Variant;
 use App\Models\rating;
-use App\Models\Collabs;
+use App\Models\Brand;
+use App\Models\Image;
 
 class ProductModel extends Model
 {
     use HasFactory;
     protected $table = 'products';
     protected $appends = ['avg_rating','min_price'];
-       public function images()
-    {
-        return $this->hasMany(Images::class, 'product_id');
-    }
+    
       public function category()
     {
         return $this->belongsTo(Category::class, 'category_id');
@@ -31,6 +29,10 @@ class ProductModel extends Model
     {
         return $this->hasMany(rating::class, 'product_id');
     }
+     public function image()
+    {
+        return $this->hasMany(Image::class, 'product_id');
+    }
     public function getAvgRatingAttribute()
         {
             return round($this->rating()->avg('rating') ?? 0,1);
@@ -39,8 +41,8 @@ class ProductModel extends Model
         {
             return $this->variants()->min('price');
         }
-    public function collab()
+    public function brand()
         {
-            return $this->belongsTo(Collab::class);
+            return $this->belongsTo(Brand::class);
         }
 }
