@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\ProductModel;
-use App\Models\FlashSale;
+use App\Models\Flashsale;
 
 class Flashsaleitem extends Model
 {
@@ -17,6 +17,6 @@ class Flashsaleitem extends Model
     }
 
     public function flashSale(){
-        return $this->belongsTo(FlashSale::class, 'flash_sale_id');
+        return $this->belongsTo(Flashsale::class, 'flash_sale_id');
     }
 }

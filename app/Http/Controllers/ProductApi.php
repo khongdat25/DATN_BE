@@ -56,7 +56,7 @@ class ProductApi extends Controller
 
      public function FlashSale(){
         $now = Carbon::now();
-       $flashSales = FlashSale::with(['items:id,flash_sale_id,sold,quantity_limit,discount_value,product_id',
+       $flashSales = Flashsale::with(['items:id,flash_sale_id,sold,quantity_limit,discount_value,product_id',
                                         'items.product:id,name,slug,sold',
                                         'items.product.images:id,product_id,image',
                                         'items.product.variants:product_id,id,image'])
@@ -141,7 +141,8 @@ class ProductApi extends Controller
     }
 
     public function Collection(){
-        $collections = Collection::take(8)->get('id','name','img','brand');
+        // Sử dụng model Collab (đã được import ở trên) thay cho Collection bị thiếu
+        $collections = Collab::take(8)->get(['id','name','img','brand']);
         return response()->json([
             'success' => true,
             'message' => 'Bộ sưu tập',
@@ -150,11 +151,12 @@ class ProductApi extends Controller
     }
 
     public function SaleBanner(){
-        $salebanner = Banner::where('sale' , true)->take(2)->get(['id','name','img']);
-          return response()->json([
+        // Thay Banner bằng Banners để khớp với model được định nghĩa trong app/Models/Banners.php
+        $salebanner = Banners::where('sale' , true)->take(2)->get(['id','name','img']);
+        return response()->json([
             'success' => true,
             'message' => 'khuyến mãi nhỏ',
-            'data' => $collections,
+            'data' => $salebanner, // Sửa $collections thành $salebanner
         ],200);
     }
 
