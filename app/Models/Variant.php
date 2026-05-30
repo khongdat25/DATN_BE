@@ -12,6 +12,7 @@ class Variant extends Model
 {
     use HasFactory;
     protected $table = 'product_variants';
+    public $timestamps = false;
     public function product()
 {
     return $this->belongsTo(ProductModel::class, 'product_id');
