@@ -93,7 +93,8 @@ class ProductApi extends Controller
      public function HotProduct(){
        $products = ProductModel::whereHas('brand', function ($q) {$q->where('is_featured', 1);})
                                         ->with(['brand:id,name',
-                                                'variants:product_id,image',
+                                                'variants:product_id,size_id', /*đây */
+                                                'variants.size:id,name',        /*đây */
                                                 'category:id,name'
                                                 ])
                                         ->orderBy('sold', 'desc')
@@ -102,7 +103,7 @@ class ProductApi extends Controller
         return response()->json(
         [
             'success' => true,
-            'message' => 'Sản Phẩm Nổi Bật theo collab',
+            'message' => 'Sản Phẩm Nổi Bật',
             'data' => $products,
         ],200);
     }
