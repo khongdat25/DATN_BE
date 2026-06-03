@@ -189,7 +189,7 @@ class ProductApi extends Controller
         return response()->json(
                 [
                     'success' => true,
-                    'message' => 'chi tiết sp',
+                    'message' => 'tìm kiếm sp thành công',
                     'data' => $products->get()
                 ],200);
         }
