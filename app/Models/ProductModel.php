@@ -29,7 +29,7 @@ class ProductModel extends Model
     {
         return $this->hasMany(rating::class, 'product_id');
     }
-     public function image()
+     public function images()
     {
         return $this->hasMany(Image::class, 'product_id');
     }

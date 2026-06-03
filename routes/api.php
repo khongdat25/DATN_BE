@@ -22,6 +22,7 @@ Route::get('/flashsales', [ProductApi::class, 'FlashSale']);
 Route::get('/bestsellings', [ProductApi::class, 'BestSelling']);
 Route::get('/hotproducts', [ProductApi::class, 'HotProduct']);
 Route::get('/product/{id}', [ProductApi::class, 'Detail']);
+Route::get('/search', [ProductApi::class, 'Search']);
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
