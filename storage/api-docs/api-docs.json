@@ -1,0 +1,445 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "DATN E-Commerce API",
+        "description": "Tài liệu API hệ thống DATN E-Commerce Backend",
+        "contact": {
+            "email": "admin@example.com"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:8000",
+            "description": "DATN API Server"
+        }
+    ],
+    "paths": {
+        "/api/register": {
+            "post": {
+                "tags": [
+                    "Xác thực (Authentication)"
+                ],
+                "summary": "Đăng ký tài khoản người dùng mới",
+                "description": "Tạo một tài khoản user mới sử dụng Email, Số điện thoại, Mật khẩu từ Frontend và tự động trả về Sanctum token để đăng nhập ngay lập tức.",
+                "operationId": "d6f5d00c40f9de2e9272088aebe648c8",
+                "requestBody": {
+                    "description": "Dữ liệu đăng ký tài khoản",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "phone",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "username@gmail.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0123456789"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Đăng ký thành công",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Đăng ký tài khoản thành công!"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "username"
+                                                        },
+                                                        "email": {
+                                                            "type": "string",
+                                                            "example": "username@gmail.com"
+                                                        },
+                                                        "phone": {
+                                                            "type": "string",
+                                                            "example": "0123456789"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "access_token": {
+                                                    "type": "string",
+                                                    "example": "1|xxxxxxxxxxxxxxxxxxxxxxxx"
+                                                },
+                                                "token_type": {
+                                                    "type": "string",
+                                                    "example": "Bearer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Dữ liệu đầu vào không hợp lệ",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Dữ liệu đầu vào không hợp lệ!"
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "email": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "Email này đã tồn tại trên hệ thống."
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Xác thực (Authentication)"
+                ],
+                "summary": "Đăng nhập người dùng",
+                "description": "Xác thực thông tin đăng nhập (Email & Mật khẩu) và cấp Sanctum token mới.",
+                "operationId": "0f5784f47a3fcac35f86ec4e82d967d7",
+                "requestBody": {
+                    "description": "Dữ liệu đăng nhập",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "username@gmail.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Đăng nhập thành công",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Đăng nhập thành công!"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user": {
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "name": {
+                                                            "type": "string",
+                                                            "example": "username"
+                                                        },
+                                                        "email": {
+                                                            "type": "string",
+                                                            "example": "username@gmail.com"
+                                                        },
+                                                        "phone": {
+                                                            "type": "string",
+                                                            "example": "0123456789"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "access_token": {
+                                                    "type": "string",
+                                                    "example": "1|xxxxxxxxxxxxxxxxxxxxxxxx"
+                                                },
+                                                "token_type": {
+                                                    "type": "string",
+                                                    "example": "Bearer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Thông tin đăng nhập sai",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tài khoản hoặc mật khẩu không chính xác!"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Dữ liệu đầu vào không hợp lệ",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Dữ liệu đầu vào không hợp lệ!"
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "email": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "example": "Email là bắt buộc."
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/logout": {
+            "post": {
+                "tags": [
+                    "Xác thực (Authentication)"
+                ],
+                "summary": "Đăng xuất người dùng",
+                "description": "Vô hiệu hóa và xóa Sanctum token hiện tại của tài khoản đang đăng nhập.",
+                "operationId": "d07352aa1a19c3f27d2df5ced5f833cf",
+                "responses": {
+                    "200": {
+                        "description": "Đăng xuất thành công",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Đăng xuất thành công!"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Chưa đăng nhập / Token không hợp lệ",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unauthenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/products": {
+            "get": {
+                "tags": [
+                    "Sản phẩm (Products)"
+                ],
+                "summary": "Lấy danh sách tất cả sản phẩm",
+                "operationId": "7eeb3d6953b4ea8123e262ef8aacc4b8",
+                "responses": {
+                    "200": {
+                        "description": "Thành công",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "test all datas"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/banner": {
+            "get": {
+                "tags": [
+                    "Banners"
+                ],
+                "summary": "Lấy danh sách slide banner",
+                "operationId": "53f7eec9c6fdfe6cc7d85e2b9a5d4dcc",
+                "responses": {
+                    "200": {
+                        "description": "Thành công",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Hero Banner"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Nhập token của bạn dạng: Bearer {token}",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Xác thực (Authentication)",
+            "description": "Xác thực (Authentication)"
+        },
+        {
+            "name": "Sản phẩm (Products)",
+            "description": "Sản phẩm (Products)"
+        },
+        {
+            "name": "Banners",
+            "description": "Banners"
+        }
+    ]
+}

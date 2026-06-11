@@ -56,7 +56,7 @@ class ProductApi extends Controller
 
      public function FlashSale(){
         $now = Carbon::now();
-       $flashSales = FlashSale::with(['items:id,flash_sale_id,sold,quantity_limit,discount_value,product_id',
+       $flashSales = Flashsale::with(['items:id,flash_sale_id,sold,quantity_limit,discount_value,product_id',
                                         'items.product:id,name,slug,sold',
                                         'items.product.images:id,product_id,image',
                                         'items.product.variants:product_id,id,image'])
