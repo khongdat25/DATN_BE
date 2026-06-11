@@ -21,29 +21,12 @@ use App\Http\Controllers\Api\V1\AuthController;
 Route::get('/products', [ProductApi::class, 'index']);
 Route::get('/banner', [ProductApi::class, 'Banner']);
 Route::get('/categories', [ProductApi::class, 'HotCategories']);
-Route::get('/flashsales', [ProductApi::class, 'Flashsale']);
-Route::get('/bestsellings', [ProductApi::class, 'Bestselling']);
-Route::get('/hotproducts', [ProductApi::class, 'Hotproduct']);
-Route::get('/product/{id}', [ProductApi::class, 'detail']);
-
-Route::middleware([
-    \Illuminate\Session\Middleware\StartSession::class,
-])->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
-
-    Route::middleware('auth')->group(function () {
-        Route::post('/logout', [AuthController::class, 'logout']);
-        Route::get('/user', function (Request $request) {
-            return $request->user();
-        });
-
-        Route::get('/cart', [CartController::class, 'index']);
-        Route::post('/cart', [CartController::class, 'store']);
-        Route::put('/cart/{id}', [CartController::class, 'update']);
-        Route::delete('/cart/{id}', [CartController::class, 'destroy']);
-
-        Route::post('/checkout', [CheckoutController::class, 'store']);
-    });
+Route::get('/flashsales', [ProductApi::class, 'FlashSale']);
+Route::get('/bestsellings', [ProductApi::class, 'BestSelling']);
+Route::get('/hotproducts', [ProductApi::class, 'HotProduct']);
+Route::get('/product/{id}', [ProductApi::class, 'Detail']);
+Route::get('/search', [ProductApi::class, 'Search']);
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
 });
 

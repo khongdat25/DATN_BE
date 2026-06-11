@@ -93,7 +93,8 @@ class ProductApi extends Controller
      public function HotProduct(){
        $products = ProductModel::whereHas('brand', function ($q) {$q->where('is_featured', 1);})
                                         ->with(['brand:id,name',
-                                                'variants:product_id,image',
+                                                'variants:product_id,size_id', /*đây */
+                                                'variants.size:id,name',        /*đây */
                                                 'category:id,name'
                                                 ])
                                         ->orderBy('sold', 'desc')
@@ -102,7 +103,7 @@ class ProductApi extends Controller
         return response()->json(
         [
             'success' => true,
-            'message' => 'Sản Phẩm Nổi Bật theo collab',
+            'message' => 'Sản Phẩm Nổi Bật',
             'data' => $products,
         ],200);
     }
@@ -125,96 +126,92 @@ class ProductApi extends Controller
                     'data' => $products,
                 ],200);
         }   
-     /*  DELL ĐỤNG VÔ OK
-     
-     public function sale(){
-        $products = ProductModel::where('sale', '!=', 0)->
-                                orderBy('sale_price', 'desc')
-                                ->take(8)
-                                ->get(['id','name','slug','price','img','stock']);
+
+        /*tìm kiếm sp :8000/api/search?
+        q='tên sp ở đây'
+        &
+        category_id='id danh mục'
+        &
+        gender='giới tính: male,female,both'
+        &
+        min_price='giá thấp nhất'
+        &
+        max_price='giá cao nhất'
+        &
+        sort= 'lọc: price_"asc/desc", sold_"asc/desc", newest/oldest */
+
+        /*db bảng products thêm  cột gender	enum('male', 'female', 'both')	default='both'  */
+
+    public function Search(Request $request)
+    {
+           $products = ProductModel::query()
+            ->select(['id','name','slug','sold','category_id','brand_id'])
+                ->selectSub(function ($q) {
+                $q->from('product_variants')
+                ->selectRaw('MIN(price)')
+                ->whereColumn('product_variants.product_id', 'products.id');
+            }, 'min_price');
+
+            if ($request->filled('q')) {
+                $products->where('name', 'like', '%' . $request->q . '%');
+            }
+            if ($request->filled('category_id')) {
+                $products->where('category_id', $request->category_id);
+            }
+            if ($request->filled('gender')) {
+                $products->whereIn('gender', [$request->gender, 'both']);
+            }
+            if ($request->filled('min_price')) {
+                $products->having('min_price', '>=', $request->min_price);
+            }
+            if ($request->filled('max_price')) {
+                $products->having('min_price', '<=', $request->max_price);
+            }
+            if ($request->filled('sort')) {
+                if ($request->sort == 'price_asc') {
+                    $products->orderBy('min_price', 'asc');
+                }
+                if ($request->sort == 'price_desc') {
+                    $products->orderBy('min_price', 'desc');
+                }
+                if ($request->sort == 'sold_desc') {
+                    $products->orderBy('sold', 'desc');
+                }
+                 if ($request->sort == 'sold_asc') {
+                    $products->orderBy('sold', 'asc');
+                }
+                if ($request->sort == 'newest') {
+                    $products->orderBy('id', 'desc');
+                }if ($request->sort == 'oldest') {
+                    $products->orderBy('id', 'asc');
+                }
+            }
         return response()->json(
-        [
-            'success' => true,
-            'message' => 'Sản Phẩm Nổi Bật',
-            'data' => $products,
-        ],200);
-    }
+                [
+                    'success' => true,
+                    'message' => 'tìm kiếm sp thành công',
+                    'data' => $products->get()
+                ],200);
+        }
+    /*
 
-    public function Collection(){
-        // Sử dụng model Collab (đã được import ở trên) thay cho Collection bị thiếu
-        $collections = Collab::take(8)->get(['id','name','img','brand']);
-        return response()->json([
-            'success' => true,
-            'message' => 'Bộ sưu tập',
-            'data' => $collections,
-        ],200);
-    }
+        if ($request->filled('category_id')){
+            $products->where('category_id', $request->category_id);
+        }
 
-    public function SaleBanner(){
-        // Thay Banner bằng Banners để khớp với model được định nghĩa trong app/Models/Banners.php
-        $salebanner = Banners::where('sale' , true)->take(2)->get(['id','name','img']);
-        return response()->json([
-            'success' => true,
-            'message' => 'khuyến mãi nhỏ',
-            'data' => $salebanner, // Sửa $collections thành $salebanner
-        ],200);
-    }
+        
+        if ($request->filled('gender')) {
+            $products->whereIn('gender', [$request->gender, 'both']);
+        }
+        tìm theo khoảng giá tag name = 'min_price' và 'max_price' 
+       if ($request->filled('min_price')) {
+        $products->having('variants_min_price', '>=', $request->min_price);
+        }
 
-    public function Reviews(){
-    $Reviews =  Comment::where('featuring', true)->take(3)->get(['id','name','avatar','comment']);
-    return response()->json([
-        'success' => true,
-            'message' => 'Reviews',
-            'data' => $Reviews,
-    ],200);
-    }
+        if ($request->filled('max_price')) {
+            $products->having('variants_min_price', '<=', $request->max_price);
+        }
+            */
 
-    public function BlogsAndNews(){
-    $data =  Blogs::where('featuring', true)->take(3)->get(['id','name','avatar','comment']);
-    return response()->json([
-        'success' => true,
-            'message' => 'Blogs and News',
-            'data' => $data,
-    ],200);
-    }
-
-*/
-
-
-
-
-     
-
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
+  
 }
