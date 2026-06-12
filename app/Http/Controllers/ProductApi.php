@@ -18,9 +18,13 @@ class ProductApi extends Controller
     /*demo test gọi toàn bộ sp */
     public function index()
     {
-        $products = ProductModel::with('images:product_id,id,image', 
-                                        'variants:product_id,size_id,color_id,sku,stock,price,image',
-                                        )->get(['id','slug','name','sold']);
+        $products = ProductModel::with([
+            'images:product_id,id,image', 
+            'variants:product_id,size_id,color_id,sku,stock,price,image',
+            'brand:id,name',
+            'category:id,name'
+        ])->get(['id','slug','name','sold','brand_id','category_id','gender']);
+        
         return response()->json(
         [
             'success' => true,
@@ -111,14 +115,14 @@ class ProductApi extends Controller
     /* lấy chi tiết sp theo id*/
 
      public function Detail($id){
-        $products = ProductModel::Where('id', $id)->with(['brand:id,name','image:id,product_id,image',
-                                                'variants:product_id,image,price,stock,color_id,size_id',
-                                                'category:id,name',
-                                                'variants.color:id,name',
-                                                'variants.size:id,name',
-                                                'rating:product_id,rating,comment,created_at,user_id',
-                                                'rating.user:id,name'
-                                                ])->first();
+         $products = ProductModel::Where('id', $id)->with(['brand:id,name','images:id,product_id,image',
+                                                 'variants:product_id,image,price,stock,color_id,size_id',
+                                                 'category:id,name',
+                                                 'variants.color:id,name',
+                                                 'variants.size:id,name',
+                                                 'rating:product_id,rating,comment,created_at,user_id',
+                                                 'rating.user:id,name'
+                                                 ])->first();
             return response()->json(
                 [
                     'success' => true,

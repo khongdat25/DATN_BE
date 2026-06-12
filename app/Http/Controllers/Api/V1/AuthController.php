@@ -15,7 +15,7 @@ class AuthController extends Controller
      * @OA\Post(
      *     path="/api/register",
      *     summary="Đăng ký tài khoản người dùng mới",
-    *     description="Tạo một tài khoản user mới sử dụng Email, Số điện thoại, Mật khẩu từ Frontend và tự động đăng nhập bằng phiên làm việc.",
+     *     description="Tạo một tài khoản user mới sử dụng Email, Số điện thoại, Mật khẩu từ Frontend và tự động đăng nhập bằng phiên làm việc.",
      *     tags={"Xác thực (Authentication)"},
      *     @OA\RequestBody(
      *         required=true,
@@ -93,30 +93,20 @@ class AuthController extends Controller
             'email' => $request->email,
             'phone' => $request->phone,
             'password' => Hash::make($request->password),
+            'role' => 'user',
+            'status' => 'active',
         ]);
 
-        Auth::login($user);
-        $request->session()->regenerate();
+        $token = auth('api')->login($user);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Đăng ký tài khoản thành công!',
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                ],
-            ]
-        ], 201);
+        return $this->respondWithToken($token, $user);
     }
 
     /**
      * @OA\Post(
      *     path="/api/login",
      *     summary="Đăng nhập người dùng",
-    *     description="Xác thực thông tin đăng nhập (Email & Mật khẩu) và tạo phiên đăng nhập cho người dùng.",
+     *     description="Xác thực thông tin đăng nhập (Email & Mật khẩu) và tạo phiên đăng nhập cho người dùng.",
      *     tags={"Xác thực (Authentication)"},
      *     @OA\RequestBody(
      *         required=true,
@@ -192,28 +182,30 @@ class AuthController extends Controller
             ], 401);
         }
 
-        Auth::login($user);
-        $request->session()->regenerate();
+        // Chặn login với tài khoản inactive/locked
+        if (in_array($user->status, ['locked', 'inactive'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động!'
+            ], 403);
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Đăng nhập thành công!',
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                ],
-            ]
-        ], 200);
+        $token = auth('api')->login($user);
+        if (!$token) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể tạo mã xác thực!'
+            ], 500);
+        }
+
+        return $this->respondWithToken($token, $user);
     }
 
     /**
      * @OA\Post(
      *     path="/api/logout",
      *     summary="Đăng xuất người dùng",
-    *     description="Đăng xuất và hủy phiên làm việc hiện tại của tài khoản đang đăng nhập.",
+     *     description="Đăng xuất và hủy phiên làm việc hiện tại của tài khoản đang đăng nhập.",
      *     tags={"Xác thực (Authentication)"},
      *     @OA\Response(
      *         response=200,
@@ -234,13 +226,219 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        auth('api')->logout();
 
         return response()->json([
             'success' => true,
             'message' => 'Đăng xuất thành công!'
+        ], 200);
+    }
+
+    /**
+     * Làm mới token (Refresh token).
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function refresh()
+    {
+        $user = auth('api')->user();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+
+        /** @var \Tymon\JWTAuth\JWTGuard $guard */
+        $guard = auth('api');
+        $token = $guard->refresh();
+        return $this->respondWithToken($token, $user);
+    }
+
+    /**
+     * Định dạng kết quả trả về khi tạo token thành công.
+     *
+     * @param  string $token
+     * @param  \App\Models\User $user
+     * @return \Illuminate\Http\JsonResponse
+     */
+    /**
+     * Cập nhật thông tin hồ sơ người dùng.
+     *
+     * @param  \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = auth('api')->user();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'birthday' => 'nullable|date',
+            'gender' => 'nullable|string|max:20',
+        ], [
+            'name.required' => 'Họ và tên là bắt buộc.',
+            'phone.required' => 'Số điện thoại là bắt buộc.',
+            'birthday.date' => 'Ngày sinh không đúng định dạng ngày.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu không hợp lệ!',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user->update([
+            'name' => $request->name,
+            'phone' => $request->phone,
+            'birthday' => $request->birthday,
+            'gender' => $request->gender,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Cập nhật hồ sơ cá nhân thành công!',
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'role' => $user->role,
+                    'status' => $user->status,
+                    'birthday' => $user->birthday,
+                    'gender' => $user->gender,
+                ]
+            ]
+        ], 200);
+    }
+
+    /**
+     * Đăng nhập bằng tài khoản Google.
+     *
+     * @param  \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function loginWithGoogle(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+        ], [
+            'token.required' => 'Mã xác thực Google là bắt buộc.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu không hợp lệ!',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $idToken = $request->token;
+        $clientId = config('services.google.client_id');
+
+        try {
+            $client = new \Google_Client(['client_id' => $clientId]);
+            $payload = $client->verifyIdToken($idToken);
+
+            if (!$payload) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mã xác thực Google không hợp lệ hoặc đã hết hạn!'
+                ], 401);
+            }
+
+            $googleId = $payload['sub'];
+            $email = $payload['email'];
+            $name = $payload['name'] ?? explode('@', $email)[0];
+
+            // Tìm user theo google_id hoặc email
+            $user = User::where('google_id', $googleId)
+                ->orWhere('email', $email)
+                ->first();
+
+            if ($user) {
+                // Nếu khớp email nhưng chưa lưu google_id thì cập nhật thêm
+                if (empty($user->google_id)) {
+                    $user->google_id = $googleId;
+                    $user->save();
+                }
+            } else {
+                // Tạo user mới nếu chưa tồn tại
+                $user = User::create([
+                    'name' => $name,
+                    'email' => $email,
+                    'google_id' => $googleId,
+                    'password' => Hash::make(\Illuminate\Support\Str::random(16)),
+                    'role' => 'user',
+                    'status' => 'active',
+                ]);
+            }
+
+            // Chặn login với tài khoản inactive/locked
+            if (in_array($user->status, ['locked', 'inactive'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tài khoản của bạn đã bị khóa hoặc ngừng hoạt động!'
+                ], 403);
+            }
+
+            $token = auth('api')->login($user);
+            if (!$token) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không thể tạo mã xác thực hệ thống!'
+                ], 500);
+            }
+
+            return $this->respondWithToken($token, $user);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi kết nối xác thực Google!',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Định dạng kết quả trả về khi tạo token thành công.
+     *
+     * @param  string $token
+     * @param  \App\Models\User $user
+     * @return \Illuminate\Http\JsonResponse
+     */
+    protected function respondWithToken($token, $user)
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Thao tác thành công!',
+            'data' => [
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => config('jwt.ttl') * 60,
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'role' => $user->role,
+                    'status' => $user->status,
+                    'birthday' => $user->birthday,
+                    'gender' => $user->gender,
+                ]
+            ]
         ], 200);
     }
 }
