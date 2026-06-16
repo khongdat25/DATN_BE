@@ -23,7 +23,7 @@ class ProductApi extends Controller
             'variants:product_id,size_id,color_id,sku,stock,price,image',
             'brand:id,name',
             'category:id,name'
-        ])->get(['id','slug','name','sold','brand_id','category_id','gender']);
+        ])->get(['id','slug','name','sold','brand_id','category_id']);
         
         return response()->json(
         [
@@ -162,9 +162,7 @@ class ProductApi extends Controller
             if ($request->filled('category_id')) {
                 $products->where('category_id', $request->category_id);
             }
-            if ($request->filled('gender')) {
-                $products->whereIn('gender', [$request->gender, 'both']);
-            }
+
             if ($request->filled('min_price')) {
                 $products->having('min_price', '>=', $request->min_price);
             }

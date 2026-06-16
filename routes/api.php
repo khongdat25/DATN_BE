@@ -50,3 +50,19 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/checkout', [CheckoutController::class, 'store']);
 });
 
+// API dành riêng cho Admin (Yêu cầu xác thực và quyền Admin)
+Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
+    Route::get('/dashboard-stats', function () {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'revenue' => 158400000,
+                'orders' => 342,
+                'customers' => 1250,
+                'conversion_rate' => 3.2
+            ]
+        ]);
+    });
+});
+
+
