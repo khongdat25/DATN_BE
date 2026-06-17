@@ -15,6 +15,16 @@ class ProductModel extends Model
 {
     use HasFactory;
     protected $table = 'products';
+    protected $fillable = [
+        'name', 
+        'slug', 
+        'category_id', 
+        'brand_id',
+        'description',
+        'status', 
+        'sold'
+    ];
+    public $timestamps = false;
     protected $appends = ['avg_rating','min_price'];
     
       public function category()
@@ -38,11 +48,12 @@ class ProductModel extends Model
             return round($this->rating()->avg('rating') ?? 0,1);
         }
     public function getMinPriceAttribute()
-        {
+    {
             return $this->variants()->min('price');
-        }
+    }
+
     public function brand()
-        {
+    {
             return $this->belongsTo(Brand::class);
-        }
+    }
 }

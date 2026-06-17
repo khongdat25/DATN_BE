@@ -17,6 +17,9 @@ use App\Http\Controllers\Api\V1\AuthController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+//lấy tên brand + category
+Route::get('/getbrands', [ProductApi::class, 'getBrands']);
+Route::get('/getcategories', [ProductApi::class, 'getCategories']);
 // sản phẩm 
 Route::get('/products', [ProductApi::class, 'index']);
 Route::get('/banner', [ProductApi::class, 'Banner']);
@@ -26,6 +29,7 @@ Route::get('/bestsellings', [ProductApi::class, 'BestSelling']);
 Route::get('/hotproducts', [ProductApi::class, 'HotProduct']);
 Route::get('/product/{id}', [ProductApi::class, 'Detail']);
 Route::get('/search', [ProductApi::class, 'Search']);
+    
 // Xác thực (Auth) công khai
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -48,5 +52,12 @@ Route::middleware('auth:api')->group(function () {
 
     // Thanh toán (Checkout)
     Route::post('/checkout', [CheckoutController::class, 'store']);
+
+    //product
+    Route::get('adminproduct', [ProductApi::class, 'admin_product']); //show sp + tìm kiếm sp + lọc theo brand_id, category_id, status
+    Route::post('product_delete/{id}', [ProductApi::class, 'product_delete']);
+    Route::post('product_add', [ProductApi::class, 'product_add']);
+    Route::post('product_edit/{id}', [ProductApi::class, 'product_edit']);
+
 });
 
