@@ -97,7 +97,9 @@ class AuthController extends Controller
             'status' => 'active',
         ]);
 
-        $token = auth('api')->login($user);
+        /** @var \Tymon\JWTAuth\JWTGuard $guard */
+        $guard = auth('api');
+        $token = $guard->login($user);
 
         return $this->respondWithToken($token, $user);
     }
@@ -190,7 +192,9 @@ class AuthController extends Controller
             ], 403);
         }
 
-        $token = auth('api')->login($user);
+        /** @var \Tymon\JWTAuth\JWTGuard $guard */
+        $guard = auth('api');
+        $token = $guard->login($user);
         if (!$token) {
             return response()->json([
                 'success' => false,
@@ -393,7 +397,9 @@ class AuthController extends Controller
                 ], 403);
             }
 
-            $token = auth('api')->login($user);
+            /** @var \Tymon\JWTAuth\JWTGuard $guard */
+            $guard = auth('api');
+            $token = $guard->login($user);
             if (!$token) {
                 return response()->json([
                     'success' => false,
