@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProductApi;
+use App\Http\Controllers\CategoryApi;
 use App\Http\Controllers\Api\V1\AuthController;
 
 /*
@@ -17,6 +18,8 @@ use App\Http\Controllers\Api\V1\AuthController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+
 //lấy tên brand + category
 Route::get('/getbrands', [ProductApi::class, 'getBrands']);
 Route::get('/getcategories', [ProductApi::class, 'getCategories']);
@@ -59,6 +62,13 @@ Route::middleware('auth:api')->group(function () {
     Route::post('product_edit/{id}', [ProductApi::class, 'product_edit']);
     Route::delete('variant/{v}', [ProductApi::class, 'variant_delete']);
     Route::delete('product/{id}', [ProductApi::class, 'product_delete']);
+
+    //crud danh mục
+    Route::get('admincategory', [CategoryApi::class, 'admin_category']);
+    Route::post('category_add', [CategoryApi::class, 'add']);
+    Route::post('category_edit/{id}', [CategoryApi::class, 'edit']);
+    Route::patch('toggle/{id}', [CategoryApi::class, 'togglecate']);
+    Route::delete('category/{category}', [CategoryApi::class, 'destroy']);
 
 });
 
