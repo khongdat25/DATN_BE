@@ -13,6 +13,17 @@ class Variant extends Model
     use HasFactory;
     protected $table = 'product_variants';
     public $timestamps = false;
+     protected $fillable = [
+        'product_id',
+        'size_id', 
+        'color_id', 
+        'sku', 
+        'stock', 
+        'price', 
+        'sale',
+        'image',
+        'status'
+    ];
     public function product()
 {
     return $this->belongsTo(ProductModel::class, 'product_id');
