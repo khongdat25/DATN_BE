@@ -294,9 +294,18 @@ class ProductApi extends Controller
          return response()->json(
         [
             'success' => true,
-            'message' => 'deleted',
+            'message' => 'product deleted',
         ],200);
     }
+
+    function variant_delete(Variant $v){
+        $v->delete();
+         return response()->json([
+            'success' => true,
+            'message' => 'variant deleted',
+        ],200);
+    }
+
     function product_add(Request $request){
     $request->validate([
         'name'        => 'required|string',
@@ -358,41 +367,6 @@ class ProductApi extends Controller
             'message' => 'failed :(',
             'error'   => $e->getMessage()
         ], 500);}
-
-        /* test mẫu add product
-                    {
-                "name": "Áo Thun Polo32231",
-                "category_id": 1,
-                "brand_id": 2,
-                "description": "text 111",
-                "variants": [
-                    {
-                        "size_id": 1,
-                        "color_id": 3,
-                        "stock": 50,
-                        "price": 185000,
-                        "image": "polo_black_s.jpg",
-                        "status": 1
-                    },
-                    {
-                        "size_id": 2,
-                        "color_id": 3,
-                        "stock": 40,
-                        "price": 185000,
-                        "image": "polo_black_m.jpg",
-                        "status": 1
-                    },
-                    {
-                        "size_id": 2,
-                        "color_id": 4,
-                        "stock": 25,
-                        "price": 190000,
-                        "image": "polo_white_m.jpg",
-                        "status": 1
-                    }
-                ]
-            }
-        */
     }
 
     function product_edit(Request $request, $id) {
