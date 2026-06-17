@@ -272,8 +272,8 @@ class ProductApi extends Controller
         }
          if ($request->filled('status')) {
                 $products->where('status', $request->status);
-            }
-
+        }
+        
         return response()->json(
         [
             'success' => true,
@@ -402,7 +402,6 @@ class ProductApi extends Controller
         $keepVariantIds = []; 
 
         foreach ($request->variants as $variant) {
-
             $colorCode = $variant['color_code'] ?? 'CLR' . $variant['color_id'];
             $sizeCode  = $variant['size_code'] ?? 'SZ' . $variant['size_id'];
 
@@ -421,7 +420,11 @@ class ProductApi extends Controller
                     $keepVariantIds[] = $existingVariant->id;
                 }
             } else {
-                $autoSku = strtoupper($productCode . '-' . $colorCode . '-' . $sizeCode . '-' . Str::random(4));
+                 do {
+                    $autoSku = strtoupper($productCode . '-' . $colorCode . '-' . $sizeCode . '-' . Str::random(4));
+                    $skuExists = Variant::where('sku', $autoSku)->exists();
+                } while ($skuExists);
+                
                 $newVariant = Variant::create([
                     'product_id' => $product->id,
                     'size_id'    => $variant['size_id'],
@@ -456,6 +459,7 @@ class ProductApi extends Controller
             'message' => 'Cập nhật thất bại!',
             'error'   => $e->getMessage()
         ], 500);
+        }
     }
-}
+    
 }
