@@ -54,10 +54,11 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/checkout', [CheckoutController::class, 'store']);
 
     //product
-    Route::get('adminproduct', [ProductApi::class, 'admin_product']); //show sp + tìm kiếm sp + lọc theo brand_id, category_id, status
-    Route::post('product_delete/{id}', [ProductApi::class, 'product_delete']);
+    Route::get('adminproduct', [ProductApi::class, 'admin_product']);
     Route::post('product_add', [ProductApi::class, 'product_add']);
     Route::post('product_edit/{id}', [ProductApi::class, 'product_edit']);
+    Route::delete('variant/{v}', [ProductApi::class, 'variant_delete']);
+    Route::delete('product/{id}', [ProductApi::class, 'product_delete']);
 
 });
 
