@@ -11,6 +11,7 @@ use App\Models\Color;
 class Variant extends Model
 {
     use HasFactory;
+    use SoftDeletes;
     protected $table = 'product_variants';
     public $timestamps = false;
      protected $fillable = [

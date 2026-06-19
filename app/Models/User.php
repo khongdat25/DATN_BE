@@ -20,6 +20,7 @@ class User extends Authenticatable implements JWTSubject
      *
      * @var array<int, string>
      */
+    use SoftDeletes;
     protected $fillable = [
         'name',
         'email',
