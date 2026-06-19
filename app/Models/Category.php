@@ -10,6 +10,7 @@ use App\Models\Variant;
 class Category extends Model
 {
     use HasFactory;
+    use SoftDeletes;
     protected $table = 'categories';
     public $timestamps = false; 
     protected $fillable = [

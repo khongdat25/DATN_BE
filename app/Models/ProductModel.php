@@ -15,6 +15,7 @@ class ProductModel extends Model
 {
     use HasFactory;
     protected $table = 'products';
+    use SoftDeletes;
     protected $fillable = [
         'name', 
         'slug', 
@@ -25,7 +26,7 @@ class ProductModel extends Model
         'sold'
     ];
     public $timestamps = false;
-    protected $appends = ['avg_rating','min_price'];
+    protected $appends = ['avg_rating','min_price','image_urls'];
     
       public function category()
     {
@@ -38,10 +39,6 @@ class ProductModel extends Model
      public function rating()
     {
         return $this->hasMany(rating::class, 'product_id');
-    }
-     public function images()
-    {
-        return $this->hasMany(Image::class, 'product_id');
     }
     public function getAvgRatingAttribute()
         {
@@ -56,4 +53,7 @@ class ProductModel extends Model
     {
             return $this->belongsTo(Brand::class);
     }
+       protected $casts = [
+        'images' => 'array',
+    ];
 }

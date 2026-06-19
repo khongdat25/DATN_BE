@@ -12,7 +12,7 @@ use App\Models\Brand;
 use Carbon\Carbon;
 class CategoryApi extends Controller
 {
-      function admin_category(Request $request){
+    function admin_category(Request $request){
          $category = Category::query()
         ->withCount(['variants as total']);
 
@@ -93,7 +93,7 @@ class CategoryApi extends Controller
             'success' => false,
             'message' => 'Danh mục này hiện đang chứa sản phẩm.'
         ], 400); 
-    }
+        }
         $category->delete();
          return response()->json([
             'success' => true,
