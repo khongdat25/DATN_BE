@@ -26,7 +26,7 @@ class CheckoutController extends Controller
             'voucher_id' => 'sometimes|integer',
         ]);
 
-        $cartItems = Cart::with('variant')->where('user_id', $user->id)->get();
+        $cartItems = Cart::query()->with('variant')->where(['user_id' => $user->id])->get();
         if ($cartItems->isEmpty()) {
             return response()->json(['message' => 'Cart is empty'], 400);
         }
@@ -54,7 +54,7 @@ class CheckoutController extends Controller
             ]);
 
             foreach ($cartItems as $item) {
-                $variant = Variant::find($item->variant_id);
+                $variant = Variant::find($item->variant_id, ['*']);
                 $price = $variant->price ?? 0;
 
                 OrderItem::create([
@@ -72,7 +72,7 @@ class CheckoutController extends Controller
             }
 
             // clear cart
-            Cart::where('user_id', $user->id)->delete();
+            Cart::query()->where(['user_id' => $user->id])->delete();
 
             DB::commit();
             return response()->json(['data' => $order], 201);

@@ -30,13 +30,15 @@ Route::get('/categories', [ProductApi::class, 'HotCategories']);
 Route::get('/flashsales', [ProductApi::class, 'FlashSale']);
 Route::get('/bestsellings', [ProductApi::class, 'BestSelling']);
 Route::get('/hotproducts', [ProductApi::class, 'HotProduct']);
-Route::get('/product/{id}', [ProductApi::class, 'Detail']);
+Route::get('/product/{slug}', [ProductApi::class, 'Detail']);
 Route::get('/search', [ProductApi::class, 'Search']);
     
 // Xác thực (Auth) công khai
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login/google', [AuthController::class, 'loginWithGoogle']);
+Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
 // API yêu cầu xác thực JWT (Guard: api)
 Route::middleware('auth:api')->group(function () {
@@ -56,10 +58,11 @@ Route::middleware('auth:api')->group(function () {
     // Thanh toán (Checkout)
     Route::post('/checkout', [CheckoutController::class, 'store']);
 
-    //product
+    // CRUD product
     Route::get('adminproduct', [ProductApi::class, 'admin_product']);
     Route::post('product_add', [ProductApi::class, 'product_add']);
     Route::post('product_edit/{id}', [ProductApi::class, 'product_edit']);
+    Route::post('upload', [ProductApi::class, 'uploadImage']);
     Route::delete('variant/{v}', [ProductApi::class, 'variant_delete']);
     Route::delete('product/{id}', [ProductApi::class, 'product_delete']);
 

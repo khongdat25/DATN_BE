@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class AuthController extends Controller
 {
@@ -175,7 +179,7 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::query()->where(['email' => $request->email])->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             return response()->json([
@@ -269,7 +273,7 @@ class AuthController extends Controller
     /**
      * Cập nhật thông tin hồ sơ người dùng.
      *
-     * @param  \Illuminate\Http\Request $request
+     * @param  Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function updateProfile(Request $request)
@@ -329,7 +333,7 @@ class AuthController extends Controller
     /**
      * Đăng nhập bằng tài khoản Google.
      *
-     * @param  \Illuminate\Http\Request $request
+     * @param  Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function loginWithGoogle(Request $request)
@@ -367,8 +371,8 @@ class AuthController extends Controller
             $name = $payload['name'] ?? explode('@', $email)[0];
 
             // Tìm user theo google_id hoặc email
-            $user = User::where('google_id', $googleId)
-                ->orWhere('email', $email)
+            $user = User::query()->where(['google_id' => $googleId])
+                ->orWhere(['email' => $email])
                 ->first();
 
             if ($user) {
@@ -383,7 +387,7 @@ class AuthController extends Controller
                     'name' => $name,
                     'email' => $email,
                     'google_id' => $googleId,
-                    'password' => Hash::make(\Illuminate\Support\Str::random(16)),
+                    'password' => Hash::make(Str::random(16)),
                     'role' => 'user',
                     'status' => 'active',
                 ]);
@@ -422,7 +426,7 @@ class AuthController extends Controller
      * Định dạng kết quả trả về khi tạo token thành công.
      *
      * @param  string $token
-     * @param  \App\Models\User $user
+     * @param  User $user
      * @return \Illuminate\Http\JsonResponse
      */
     protected function respondWithToken($token, $user)
@@ -445,6 +449,126 @@ class AuthController extends Controller
                     'gender' => $user->gender,
                 ]
             ]
+        ], 200);
+    }
+
+    /**
+     * Gửi email khôi phục mật khẩu.
+     */
+    public function sendResetLinkEmail(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email|exists:users,email',
+        ], [
+            'email.required' => 'Email là bắt buộc.',
+            'email.email' => 'Email không đúng định dạng.',
+            'email.exists' => 'Email không tồn tại trong hệ thống.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu đầu vào không hợp lệ!',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $email = $request->email;
+        $token = Str::random(60);
+
+        // Lưu hoặc cập nhật token trong database
+        $table = 'password_reset_tokens';
+        DB::table($table)->updateOrInsert(
+            ['email' => $email],
+            [
+                'token' => $token,
+                'created_at' => Carbon::now()
+            ]
+        );
+
+        // Gửi Mail
+        try {
+            Mail::to($email)->send(new \App\Mail\ResetPasswordMail($token, $email));
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể gửi email khôi phục mật khẩu. Vui lòng kiểm tra cấu hình mail!',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Liên kết khôi phục mật khẩu đã được gửi đến email của bạn!'
+        ], 200);
+    }
+
+    /**
+     * Đặt lại mật khẩu mới.
+     */
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+            'email' => 'required|string|email|exists:users,email',
+            'password' => 'required|string|min:6|confirmed',
+        ], [
+            'token.required' => 'Mã xác thực (token) là bắt buộc.',
+            'email.required' => 'Email là bắt buộc.',
+            'email.email' => 'Email không đúng định dạng.',
+            'email.exists' => 'Email không tồn tại trong hệ thống.',
+            'password.required' => 'Mật khẩu là bắt buộc.',
+            'password.min' => 'Mật khẩu phải có tối thiểu 6 ký tự.',
+            'password.confirmed' => 'Xác nhận mật khẩu không khớp.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu đầu vào không hợp lệ!',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $table = 'password_reset_tokens';
+        $resetRecord = DB::table($table)
+            ->where([
+                'email' => $request->email,
+                'token' => $request->token,
+            ])
+            ->first();
+
+        if (!$resetRecord) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mã xác nhận hoặc email không hợp lệ!'
+            ], 400);
+        }
+
+        // Kiểm tra thời gian hết hạn (60 phút)
+        if (Carbon::parse($resetRecord->created_at)->addMinutes(60)->isPast()) {
+            // Xóa token đã hết hạn
+            $table = 'password_reset_tokens';
+            DB::table($table)->where(['email' => $request->email])->delete();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Liên kết khôi phục mật khẩu đã hết hạn!'
+            ], 400);
+        }
+
+        // Cập nhật mật khẩu user
+        $user = User::query()->where(['email' => $request->email])->first();
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        // Xóa token sau khi reset thành công
+        $table = 'password_reset_tokens';
+        DB::table($table)->where(['email' => $request->email])->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đặt lại mật khẩu thành công!'
         ], 200);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Images;
 use App\Models\Category;
 use App\Models\Variant;
@@ -23,7 +24,8 @@ class ProductModel extends Model
         'brand_id',
         'description',
         'status', 
-        'sold'
+        'sold',
+        'images'
     ];
     public $timestamps = false;
     protected $appends = ['avg_rating','min_price','image_urls'];
@@ -47,6 +49,26 @@ class ProductModel extends Model
     public function getMinPriceAttribute()
     {
             return $this->variants()->min('price');
+    }
+
+    public function getImageUrlsAttribute()
+    {
+        $images = $this->images;
+        if (!is_array($images)) {
+            return [];
+        }
+        return array_map(function ($image) {
+            if (empty($image)) {
+                return url('/images/placeholder.png');
+            }
+            if (str_starts_with($image, 'http://') || str_starts_with($image, 'https://') || str_starts_with($image, 'data:')) {
+                return $image;
+            }
+            if (!str_starts_with($image, 'images/') && !str_starts_with($image, '/images/')) {
+                return url('images/' . $image);
+            }
+            return url($image);
+        }, $images);
     }
 
     public function brand()

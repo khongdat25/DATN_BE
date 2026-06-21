@@ -9,7 +9,7 @@ use App\Models\ProductModel;
 use App\Models\Variant;
 use App\Models\Banners;
 use App\Models\Category;
-use App\Models\FlashSale;
+use App\Models\Flashsale;
 use App\Models\Brand;
 use Carbon\Carbon;
 
@@ -21,7 +21,7 @@ class ProductApi extends Controller
     /*demo test gọi toàn bộ sp */
     public function index()
     {
-        $products = ProductModel::with([
+        $products = ProductModel::query()->with([
             'variants:product_id,size_id,color_id,sku,stock,price,image',
             'brand:id,name',
             'category:id,name'
@@ -81,12 +81,12 @@ class ProductApi extends Controller
 
      public function FlashSale(){
         $now = Carbon::now();
-       $flashSales = Flashsale::with(['items:id,flash_sale_id,sold,quantity_limit,discount_value,product_id',
+       $flashSales = Flashsale::query()->with(['items:id,flash_sale_id,sold,quantity_limit,discount_value,product_id',
                                         'items.product:id,name,slug,sold,images',
                                         'items.product.variants:product_id,id,image,price,sale'])
-                                                ->where('status', 1)
-                                                ->whereDate('start_time', '<=', now())
-                                                ->whereDate('end_time', '>=', now())
+                                                ->where(['status' => 1])
+                                                ->whereDate('start_time', '<=', $now)
+                                                ->whereDate('end_time', '>=', $now)
                                                 ->take(5)
                                                 ->get();
         return response()->json(
@@ -100,8 +100,8 @@ class ProductApi extends Controller
     /*gọi sp bán chạy*/
 
      public function BestSelling(){
-        $products = ProductModel::Where('status', 1)->with(['variants:product_id,image,price,sale','category:id,name'])
-                                        ->orderBy('sold', 'desc')
+        $products = ProductModel::query()->where(['status' => 1])->with(['variants:product_id,image,price,sale','category:id,name'])
+                                        ->orderByRaw('sold desc')
                                         ->take(5)
                                         ->get(['id','name','slug','sold','category_id','images']);
         return response()->json(
@@ -115,13 +115,13 @@ class ProductApi extends Controller
    /*gọi sp nổi bật, điều kiện trong bảng brand có is_feature khác 0*/
     
      public function HotProduct(){
-       $products = ProductModel::whereHas('brand', function ($q) {$q->where('is_featured', 1);})
+       $products = ProductModel::query()->whereHas('brand', function ($q) {$q->where('is_featured', 1);})
                                         ->with(['brand:id,name',
                                                 'variants:product_id,size_id,price,sale', 
                                                 'variants.size:id,name',       
                                                 'category:id,name'
                                                 ])
-                                        ->orderBy('sold', 'desc')
+                                        ->orderByRaw('sold desc')
                                         ->take(5)
                                         ->get(['id','name','slug','sold','category_id','brand_id','images']);
         return response()->json(
@@ -134,8 +134,8 @@ class ProductApi extends Controller
 
     /* lấy chi tiết sp theo id*/
 
-    public function Detail($slug){
-         $product = ProductModel::Where('slug', $slug)->with(['brand:id,name','images:id,product_id,image',
+    public function Detail(string $slug){
+         $product = ProductModel::query()->where(['slug' => $slug])->with(['brand:id,name',
                                                  'variants:product_id,image,price,sale,stock,color_id,size_id',
                                                  'category:id,name',
                                                  'variants.color:id,name',
@@ -146,16 +146,15 @@ class ProductApi extends Controller
         if (!$product) {
             return response()->json(['success' => false, 'message' => 'no product found'], 404);
             }
-        $related = ProductModel::Where('slug','!=' , $slug)
-                                   ->where('category_id', $product->category_id)
+        $related = ProductModel::query()->where([['slug', '!=', $slug]])
+                                   ->where(['category_id' => $product->category_id])
                                     ->limit(4)
                                     ->with([
-                                        'images:id,product_id,image', 
                                         'variants:product_id,size_id,color_id,sku,stock,price,sale,image',
                                         'brand:id,name',
                                         'category:id,name'
                                     ])
-                                    ->get(['id', 'slug', 'name', 'sold', 'brand_id', 'category_id',]);
+                                    ->get(['id', 'slug', 'name', 'sold', 'brand_id', 'category_id', 'images']);
         $related = $related->sortBy(fn($item) => $item->min_price)->values();
         $related->each(fn($item) => $item->setRelation('variants', $item->variants->take(1)));
             return response()->json(
@@ -184,17 +183,14 @@ class ProductApi extends Controller
            $products = ProductModel::query()
             ->select(['id','name','slug','sold','category_id','brand_id','images'])
             ->withMin('variants as min_price', 'price');
-          if (!$products) {
-            return response()->json(['success' => false, 'message' => 'không có sp'], 404);
-            }
             if ($request->filled('q')) {
-                $products->where('name', 'like', '%' . $request->q . '%');
+                $products->where([['name', 'like', '%' . $request->q . '%']]);
             }
             if ($request->filled('category_id')) {
-                $products->where('category_id', $request->category_id);
+                $products->where(['category_id' => $request->category_id]);
             }
             if ($request->filled('brand_id')) {
-                $products->where('brand_id', $request->brand_id);
+                $products->where(['brand_id' => $request->brand_id]);
             }
             if ($request->filled('min_price') && $request->filled('max_price')) {
 
@@ -218,21 +214,21 @@ class ProductApi extends Controller
 
             if ($request->filled('sort')) {
                 if ($request->sort == 'price_asc') {
-                    $products->orderBy('min_price', 'asc');
+                    $products->orderByRaw('min_price asc');
                 }
                 if ($request->sort == 'price_desc') {
-                    $products->orderBy('min_price', 'desc');
+                    $products->orderByRaw('min_price desc');
                 }
                 if ($request->sort == 'sold_desc') {
-                    $products->orderBy('sold', 'desc');
+                    $products->orderByRaw('sold desc');
                 }
                  if ($request->sort == 'sold_asc') {
-                    $products->orderBy('sold', 'asc');
+                    $products->orderByRaw('sold asc');
                 }
                 if ($request->sort == 'newest') {
-                    $products->orderBy('id', 'desc');
+                    $products->orderByRaw('id desc');
                 }if ($request->sort == 'oldest') {
-                    $products->orderBy('id', 'asc');
+                    $products->orderByRaw('id asc');
                 }
             }
         return response()->json(
@@ -259,16 +255,16 @@ class ProductApi extends Controller
         ->withMax('variants as max_price', 'price');
 
         if($request->filled('q')) {
-                $products->where('name', 'like', '%' . $request->q . '%');
+                $products->where([['name', 'like', '%' . $request->q . '%']]);
         }
         if ($request->filled('category_id')) {
-                $products->where('category_id', $request->category_id);
+                $products->where(['category_id' => $request->category_id]);
         }
         if ($request->filled('brand_id')) {
-                $products->where('brand_id', $request->brand_id);
+                $products->where(['brand_id' => $request->brand_id]);
         }
          if ($request->filled('status')) {
-                $products->where('status', $request->status);
+                $products->where(['status' => $request->status]);
         }
         
         return response()->json(
@@ -280,12 +276,11 @@ class ProductApi extends Controller
         ],200);
     }
 
-    function product_delete($id){
-        $product = ProductModel::find($id);
+    function product_delete(int $id){
+        $product = ProductModel::find($id, ['*']);
          if (!$product) {
         return response()->json(['success' => false, 'message' => 'no product found'], 404);
         }
-         $product->images()->delete();
         $product->variants()->delete();
         $product->delete();
          return response()->json(
@@ -296,7 +291,7 @@ class ProductApi extends Controller
     }
 
     function variant_delete(Variant $v){
-        $v->delete();
+        Variant::destroy($v->id);
          return response()->json([
             'success' => true,
             'message' => 'variant deleted',
@@ -309,6 +304,7 @@ class ProductApi extends Controller
         'category_id' => 'required|integer',
         'brand_id'    => 'required|integer',
         'variants'    => 'required|array',
+        'images'      => 'nullable|array',
         ]);
         DB::beginTransaction();
 
@@ -319,6 +315,7 @@ class ProductApi extends Controller
             'category_id' => $request->category_id,
             'brand_id'    => $request->brand_id,
             'description' =>$request->description,
+            'images'      => $request->images,
             'status'      => 1,
             'sold'        => 0,
         ]);
@@ -366,14 +363,15 @@ class ProductApi extends Controller
         ], 500);}
     }
 
-    function product_edit(Request $request, $id) {
+    function product_edit(Request $request, int $id) {
         $request->validate([
         'name'        => 'required|string',
         'category_id' => 'required|integer',
         'brand_id'    => 'required|integer',
         'variants'    => 'required|array',
+        'images'      => 'nullable|array',
         ]);
-        $product = ProductModel::find($id);
+        $product = ProductModel::find($id, ['*']);
         if (!$product) {
         return response()->json(['success' => false, 'message' => 'Không tìm thấy sản phẩm!'], 404);
         }
@@ -387,6 +385,7 @@ class ProductApi extends Controller
             'category_id' => $request->category_id,
             'brand_id'    => $request->brand_id,
             'description' =>$request->description,
+            'images'      => $request->images,
         ]);
         $word = Str::slug($request->name, ' ');
         $words = explode(' ', $word);
@@ -403,7 +402,7 @@ class ProductApi extends Controller
             $sizeCode  = $variant['size_code'] ?? 'SZ' . $variant['size_id'];
 
             if (isset($variant['id']) && !empty($variant['id'])) {
-                $existingVariant = Variant::find($variant['id']);
+                $existingVariant = Variant::find($variant['id'], ['*']);
                 if ($existingVariant) {
                     $existingVariant->update([
                         'size_id'  => $variant['size_id'],
@@ -419,7 +418,7 @@ class ProductApi extends Controller
             } else {
                  do {
                     $autoSku = strtoupper($productCode . '-' . $colorCode . '-' . $sizeCode . '-' . Str::random(4));
-                    $skuExists = Variant::where('sku', $autoSku)->exists();
+                     $skuExists = Variant::query()->where(['sku' => $autoSku])->exists();
                 } while ($skuExists);
                 
                 $newVariant = Variant::create([
@@ -436,7 +435,7 @@ class ProductApi extends Controller
                 $keepVariantIds[] = $newVariant->id;
             }
         }
-        Variant::where('product_id', $product->id)
+        Variant::query()->where(['product_id' => $product->id])
             ->whereNotIn('id', $keepVariantIds)
             ->delete();
 
@@ -457,6 +456,41 @@ class ProductApi extends Controller
             'error'   => $e->getMessage()
         ], 500);
         }
+    }
+
+    public function uploadImage(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+        ], [
+            'image.required' => 'Vui lòng chọn một file ảnh.',
+            'image.image' => 'File phải là định dạng ảnh.',
+            'image.mimes' => 'Định dạng ảnh không hợp lệ (hỗ trợ jpeg, png, jpg, gif, svg, webp).',
+            'image.max' => 'Kích thước ảnh tối đa là 2MB.',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $filename = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
+            
+            if (!file_exists(public_path('images'))) {
+                mkdir(public_path('images'), 0755, true);
+            }
+            
+            $file->move(public_path('images'), $filename);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tải ảnh lên thành công!',
+                'filename' => $filename,
+                'url' => url('images/' . $filename)
+            ], 200);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Không tìm thấy file ảnh tải lên!',
+        ], 400);
     }
     
 }
