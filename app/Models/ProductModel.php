@@ -43,12 +43,24 @@ class ProductModel extends Model
         return $this->hasMany(rating::class, 'product_id');
     }
     public function getAvgRatingAttribute()
-        {
-            return round($this->rating()->avg('rating') ?? 0,1);
+    {
+        if (array_key_exists('avg_rating', $this->attributes)) {
+            return round($this->attributes['avg_rating'] ?? 0, 1);
         }
+        if ($this->relationLoaded('rating')) {
+            return round($this->rating->avg(fn($r) => $r->rating) ?? 0, 1);
+        }
+        return round($this->rating()->avg('rating') ?? 0, 1);
+    }
     public function getMinPriceAttribute()
     {
-            return $this->variants()->min('price');
+        if (array_key_exists('min_price', $this->attributes)) {
+            return $this->attributes['min_price'];
+        }
+        if ($this->relationLoaded('variants')) {
+            return $this->variants->min(fn($v) => $v->price);
+        }
+        return $this->variants()->min('price');
     }
 
     public function getImageUrlsAttribute()

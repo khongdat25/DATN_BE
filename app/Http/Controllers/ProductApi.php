@@ -25,7 +25,9 @@ class ProductApi extends Controller
             'variants:product_id,size_id,color_id,sku,stock,price,image',
             'brand:id,name',
             'category:id,name'
-        ])->get(['id','slug','name','sold','brand_id','category_id','images']);
+        ])
+        ->withAvg('rating as avg_rating', 'rating')
+        ->get(['id','slug','name','sold','brand_id','category_id','images']);
         
         return response()->json(
         [
@@ -100,10 +102,15 @@ class ProductApi extends Controller
     /*gọi sp bán chạy*/
 
      public function BestSelling(){
-        $products = ProductModel::query()->where(['status' => 1])->with(['variants:product_id,image,price,sale','category:id,name'])
-                                        ->orderByRaw('sold desc')
-                                        ->take(5)
-                                        ->get(['id','name','slug','sold','category_id','images']);
+        $products = ProductModel::query()->where(['status' => 1])
+                                         ->with([
+                                             'variants:product_id,image,price,sale',
+                                             'category:id,name'
+                                         ])
+                                         ->withAvg('rating as avg_rating', 'rating')
+                                         ->orderByRaw('sold desc')
+                                         ->take(5)
+                                         ->get(['id','name','slug','sold','category_id','images']);
         return response()->json(
         [
             'success' => true,
@@ -116,14 +123,15 @@ class ProductApi extends Controller
     
      public function HotProduct(){
        $products = ProductModel::query()->whereHas('brand', function ($q) {$q->where('is_featured', 1);})
-                                        ->with(['brand:id,name',
-                                                'variants:product_id,size_id,price,sale', 
-                                                'variants.size:id,name',       
-                                                'category:id,name'
-                                                ])
-                                        ->orderByRaw('sold desc')
-                                        ->take(5)
-                                        ->get(['id','name','slug','sold','category_id','brand_id','images']);
+                                         ->with(['brand:id,name',
+                                                 'variants:product_id,size_id,price,sale', 
+                                                 'variants.size:id,name',       
+                                                 'category:id,name'
+                                                 ])
+                                         ->withAvg('rating as avg_rating', 'rating')
+                                         ->orderByRaw('sold desc')
+                                         ->take(5)
+                                         ->get(['id','name','slug','sold','category_id','brand_id','images']);
         return response()->json(
         [
             'success' => true,
@@ -132,21 +140,31 @@ class ProductApi extends Controller
         ],200);
     }
 
-    /* lấy chi tiết sp theo id*/
+    /* lấy chi tiết sp theo slug hoặc id */
 
     public function Detail(string $slug){
-         $product = ProductModel::query()->where(['slug' => $slug])->with(['brand:id,name',
-                                                 'variants:product_id,image,price,sale,stock,color_id,size_id',
-                                                 'category:id,name',
-                                                 'variants.color:id,name',
-                                                 'variants.size:id,name',
-                                                 'rating:product_id,rating,comment,created_at,user_id',
-                                                 'rating.user:id,name'
-                                                 ])->first();
+        // Nếu tham số là số nguyên → tìm theo id, ngược lại tìm theo slug
+        $query = ProductModel::query()->with([
+            'brand:id,name',
+            'variants:product_id,image,price,sale,stock,color_id,size_id',
+            'category:id,name',
+            'variants.color:id,name',
+            'variants.size:id,name',
+            'rating:product_id,rating,comment,created_at,user_id',
+            'rating.user:id,name'
+        ]);
+
+        if (ctype_digit($slug)) {
+            $product = $query->find((int) $slug);
+        } else {
+            $product = $query->where('slug', $slug)->first();
+        }
+
         if (!$product) {
             return response()->json(['success' => false, 'message' => 'no product found'], 404);
-            }
-        $related = ProductModel::query()->where([['slug', '!=', $slug]])
+        }
+
+        $related = ProductModel::query()->where([['id', '!=', $product->id]])
                                    ->where(['category_id' => $product->category_id])
                                     ->limit(4)
                                     ->with([
@@ -154,16 +172,18 @@ class ProductApi extends Controller
                                         'brand:id,name',
                                         'category:id,name'
                                     ])
+                                    ->withAvg('rating as avg_rating', 'rating')
                                     ->get(['id', 'slug', 'name', 'sold', 'brand_id', 'category_id', 'images']);
         $related = $related->sortBy(fn($item) => $item->min_price)->values();
         $related->each(fn($item) => $item->setRelation('variants', $item->variants->take(1)));
-            return response()->json(
-                [
-                    'success' => true,
-                    'message' => 'chi tiết sp',
-                    'data' =>  ['product' => $product, 'related' => $related ]
-                ],200);
-    }   
+        return response()->json(
+            [
+                'success' => true,
+                'message' => 'chi tiết sp',
+                'data' =>  ['product' => $product, 'related' => $related ]
+            ],200);
+    }
+
 
         /*tìm kiếm sp :8000/api/search?
         q='tên sp ở đây'
@@ -182,6 +202,14 @@ class ProductApi extends Controller
     {
            $products = ProductModel::query()
             ->select(['id','name','slug','sold','category_id','brand_id','images'])
+            ->with([
+                'variants:product_id,size_id,color_id,sku,stock,price,image',
+                'variants.color:id,name',
+                'variants.size:id,name',
+                'brand:id,name',
+                'category:id,name'
+            ])
+            ->withAvg('rating as avg_rating', 'rating')
             ->withMin('variants as min_price', 'price');
             if ($request->filled('q')) {
                 $products->where([['name', 'like', '%' . $request->q . '%']]);
@@ -230,6 +258,9 @@ class ProductApi extends Controller
                 }if ($request->sort == 'oldest') {
                     $products->orderByRaw('id asc');
                 }
+            }
+            if ($request->filled('limit')) {
+                $products->limit((int)$request->limit);
             }
         return response()->json(
                 [
