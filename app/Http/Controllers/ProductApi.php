@@ -22,7 +22,7 @@ class ProductApi extends Controller
     public function index()
     {
         $products = ProductModel::query()->with([
-            'variants:product_id,size_id,color_id,sku,stock,price,image',
+            'variants:id,product_id,size_id,color_id,sku,stock,price,image',
             'brand:id,name',
             'category:id,name'
         ])
@@ -146,7 +146,7 @@ class ProductApi extends Controller
         // Nếu tham số là số nguyên → tìm theo id, ngược lại tìm theo slug
         $query = ProductModel::query()->with([
             'brand:id,name',
-            'variants:product_id,image,price,sale,stock,color_id,size_id',
+            'variants:id,product_id,image,price,sale,stock,color_id,size_id',
             'category:id,name',
             'variants.color:id,name',
             'variants.size:id,name',
@@ -203,7 +203,7 @@ class ProductApi extends Controller
            $products = ProductModel::query()
             ->select(['id','name','slug','sold','category_id','brand_id','images'])
             ->with([
-                'variants:product_id,size_id,color_id,sku,stock,price,image',
+                'variants:id,product_id,size_id,color_id,sku,stock,price,image',
                 'variants.color:id,name',
                 'variants.size:id,name',
                 'brand:id,name',

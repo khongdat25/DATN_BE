@@ -13,11 +13,21 @@ class CartController extends Controller
     {
         $user = $request->user();
         $items = Cart::query()->with([
-            'variant.product.images',
-            'variant.color',
-            'variant.size'
+            'variant:id,product_id,price,sale,color_id,size_id,image',
+            'variant.product:id,name,slug,images,brand_id',
+            'variant.product.brand:id,name',
+            'variant.color:id,name',
+            'variant.size:id,name'
         ])->where(['user_id' => $user->id])->get();
-        return response()->json(['data' => $items]);
+
+        // Ẩn các appended attributes nặng của ProductModel để tránh lỗi 500
+        $items->each(function ($item) {
+            if ($item->variant && $item->variant->product) {
+                $item->variant->product->makeHidden(['avg_rating', 'min_price', 'image_urls']);
+            }
+        });
+
+        return response()->json(['success' => true, 'data' => $items]);
     }
 
     public function store(Request $request)
@@ -36,14 +46,23 @@ class CartController extends Controller
         $quantity = $data['quantity'] ?? 1;
 
         $cart = Cart::query()->where(['user_id' => $user->id, 'variant_id' => $variant->id])->first();
+        $currentQuantity = $cart ? $cart->quantity : 0;
+        $newQuantity = $currentQuantity + $quantity;
+
+        if (isset($variant->stock) && $newQuantity > $variant->stock) {
+            return response()->json([
+                'message' => 'Số lượng yêu cầu (' . $newQuantity . ') vượt quá tồn kho (Hiện có: ' . $variant->stock . ')'
+            ], 400);
+        }
+
         if ($cart) {
-            $cart->quantity += $quantity;
+            $cart->quantity = $newQuantity;
             $cart->save();
         } else {
             $cart = Cart::create([
                 'user_id' => $user->id,
                 'variant_id' => $variant->id,
-                'quantity' => $quantity,
+                'quantity' => $newQuantity,
             ]);
         }
 
@@ -64,6 +83,13 @@ class CartController extends Controller
         }
         if (!$cart) return response()->json(['message' => 'Not found'], 404);
 
+        $variant = Variant::find($cart->variant_id, ['*']);
+        if ($variant && isset($variant->stock) && $data['quantity'] > $variant->stock) {
+            return response()->json([
+                'message' => 'Số lượng yêu cầu (' . $data['quantity'] . ') vượt quá tồn kho (Hiện có: ' . $variant->stock . ')'
+            ], 400);
+        }
+
         $cart->quantity = $data['quantity'];
         $cart->save();
 
@@ -78,5 +104,12 @@ class CartController extends Controller
 
         $cart->delete();
         return response()->json(['message' => 'Deleted']);
+    }
+
+    public function clear(Request $request)
+    {
+        $user = $request->user();
+        Cart::query()->where(['user_id' => $user->id])->delete();
+        return response()->json(['message' => 'Cart cleared']);
     }
 }

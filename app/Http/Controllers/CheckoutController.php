@@ -24,11 +24,29 @@ class CheckoutController extends Controller
             'note' => 'sometimes|string',
             'payment_method_id' => 'sometimes|integer',
             'voucher_id' => 'sometimes|integer',
+            'variant_id' => 'nullable|integer',
+            'quantity' => 'nullable|integer|min:1',
         ]);
 
-        $cartItems = Cart::query()->with('variant')->where(['user_id' => $user->id])->get();
-        if ($cartItems->isEmpty()) {
-            return response()->json(['message' => 'Cart is empty'], 400);
+        $isBuyNow = isset($data['variant_id']);
+
+        if ($isBuyNow) {
+            $variant = Variant::find($data['variant_id']);
+            if (!$variant) {
+                return response()->json(['message' => 'Variant not found'], 404);
+            }
+            $cartItems = collect([
+                (object)[
+                    'variant_id' => $variant->id,
+                    'quantity' => $data['quantity'] ?? 1,
+                    'variant' => $variant
+                ]
+            ]);
+        } else {
+            $cartItems = Cart::query()->with('variant')->where(['user_id' => $user->id])->get();
+            if ($cartItems->isEmpty()) {
+                return response()->json(['message' => 'Cart is empty'], 400);
+            }
         }
 
         $total = 0;
@@ -71,8 +89,10 @@ class CheckoutController extends Controller
                 }
             }
 
-            // clear cart
-            Cart::query()->where(['user_id' => $user->id])->delete();
+            // clear cart only if this is NOT a buy-now checkout
+            if (!$isBuyNow) {
+                Cart::query()->where(['user_id' => $user->id])->delete();
+            }
 
             DB::commit();
             return response()->json(['data' => $order], 201);
