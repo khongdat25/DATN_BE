@@ -17,13 +17,13 @@ class CheckoutController extends Controller
         $user = $request->user();
 
         $data = $request->validate([
-            'name' => 'sometimes|string',
-            'email' => 'sometimes|email',
-            'phone' => 'sometimes|string',
-            'address' => 'sometimes|string',
-            'note' => 'sometimes|string',
-            'payment_method_id' => 'sometimes|integer',
-            'voucher_id' => 'sometimes|integer',
+            'name' => 'sometimes|nullable|string',
+            'email' => 'sometimes|nullable|email',
+            'phone' => 'sometimes|nullable|string',
+            'address' => 'sometimes|nullable|string',
+            'note' => 'sometimes|nullable|string',
+            'payment_method_id' => 'sometimes|nullable|integer',
+            'voucher_id' => 'sometimes|nullable|integer',
             'variant_id' => 'nullable|integer',
             'quantity' => 'nullable|integer|min:1',
         ]);
@@ -31,7 +31,7 @@ class CheckoutController extends Controller
         $isBuyNow = isset($data['variant_id']);
 
         if ($isBuyNow) {
-            $variant = Variant::find($data['variant_id']);
+            $variant = Variant::find($data['variant_id'], ['*']);
             if (!$variant) {
                 return response()->json(['message' => 'Variant not found'], 404);
             }

@@ -7,6 +7,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ProductApi;
 use App\Http\Controllers\CategoryApi;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\AddressController;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,6 +49,12 @@ Route::middleware('auth:api')->group(function () {
         return $request->user();
     });
     Route::put('/user/profile', [AuthController::class, 'updateProfile']);
+
+    // Địa chỉ (Address)
+    Route::get('/addresses', [AddressController::class, 'index']);
+    Route::post('/addresses', [AddressController::class, 'store']);
+    Route::put('/addresses/{id}', [AddressController::class, 'update']);
+    Route::delete('/addresses/{id}', [AddressController::class, 'destroy']);
 
     // Giỏ hàng (Cart)
     Route::get('/cart', [CartController::class, 'index']);
