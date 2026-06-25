@@ -15,4 +15,9 @@ class Order extends Model
         'user_id', 'name', 'email', 'phone', 'address', 'note',
         'total_amount', 'voucher_id', 'payment_method_id', 'payment_status', 'status'
     ];
+
+    public function items()
+    {
+        return $this->hasMany(OrderItem::class, 'order_id');
+    }
 }

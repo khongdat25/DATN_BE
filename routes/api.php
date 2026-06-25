@@ -8,6 +8,7 @@ use App\Http\Controllers\ProductApi;
 use App\Http\Controllers\CategoryApi;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AddressController;
+use App\Http\Controllers\OrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -40,6 +41,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/login/google', [AuthController::class, 'loginWithGoogle']);
 Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
+// Webhook thanh toán PayOS
+Route::post('/payment/payos-webhook', [CheckoutController::class, 'payosWebhook']);
 
 // API yêu cầu xác thực JWT (Guard: api)
 Route::middleware('auth:api')->group(function () {
@@ -74,12 +78,18 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('variant/{v}', [ProductApi::class, 'variant_delete']);
     Route::delete('product/{id}', [ProductApi::class, 'product_delete']);
 
-    //crud danh mục
+    // CRUD danh mục
     Route::get('admincategory', [CategoryApi::class, 'admin_category']);
     Route::post('category_add', [CategoryApi::class, 'add']);
     Route::post('category_edit/{id}', [CategoryApi::class, 'edit']);
     Route::patch('toggle/{id}', [CategoryApi::class, 'togglecate']);
     Route::delete('category/{category}', [CategoryApi::class, 'destroy']);
+
+    // Đơn hàng (Orders) cho User
+    Route::get('/user/orders', [OrderController::class, 'userIndex']);
+    Route::get('/user/orders/{id}', [OrderController::class, 'userShow']);
+    Route::delete('/user/orders/{id}', [OrderController::class, 'userDestroy']);
+    Route::post('/user/orders/{id}/cancel', [OrderController::class, 'userCancel']);
 
 });
 
@@ -96,6 +106,11 @@ Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
             ]
         ]);
     });
+
+    // Quản lý đơn hàng (Orders) cho Admin
+    Route::get('/orders', [OrderController::class, 'adminIndex']);
+    Route::post('/orders/{id}/status', [OrderController::class, 'adminUpdateStatus']);
+    Route::delete('/orders/{id}', [OrderController::class, 'adminDestroy']);
 });
 
 

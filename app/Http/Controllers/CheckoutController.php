@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use PayOS\PayOS;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -57,6 +58,13 @@ class CheckoutController extends Controller
 
         DB::beginTransaction();
         try {
+            $clientId = env('PAYOS_CLIENT_ID');
+            $apiKey = env('PAYOS_API_KEY');
+            $checksumKey = env('PAYOS_CHECKSUM_KEY');
+
+            $isQrPayment = ($data['payment_method_id'] == 2 || $data['payment_method_id'] == 3);
+
+            // Set initial order status: 'pending' (Chờ xác nhận) if QR + PayOS enabled, else 'new' (Đang chờ duyệt)
             $order = Order::create([
                 'user_id' => $user->id,
                 'name' => $data['name'] ?? $user->name,
@@ -68,7 +76,7 @@ class CheckoutController extends Controller
                 'voucher_id' => $data['voucher_id'] ?? null,
                 'payment_method_id' => $data['payment_method_id'] ?? null,
                 'payment_status' => 'pending',
-                'status' => 'new',
+                'status' => ($isQrPayment && $clientId) ? 'pending' : 'new',
             ]);
 
             foreach ($cartItems as $item) {
@@ -89,16 +97,103 @@ class CheckoutController extends Controller
                 }
             }
 
+            // Check if PayOS API is reachable (to prevent timeouts if server is offline or cURL fails)
+            $isPayOsReachable = false;
+            if ($isQrPayment && $clientId && $apiKey && $checksumKey) {
+                $connection = @fsockopen('api-merchant.payos.vn', 443, $errno, $errstr, 1.5);
+                if ($connection) {
+                    $isPayOsReachable = true;
+                    fclose($connection);
+                } else {
+                    \Illuminate\Support\Facades\Log::warning("PayOS API not reachable: $errstr ($errno). Falling back to standard checkout.");
+                }
+            }
+
+            // Create PayOS payment link if keys are configured and reachable
+            $payOSResponse = null;
+            if ($isQrPayment && $clientId && $apiKey && $checksumKey && $isPayOsReachable) {
+                try {
+                    $payOS = new PayOS($clientId, $apiKey, $checksumKey);
+                    $baseUrl = env('FRONTEND_URL', 'http://localhost:5173');
+
+                    $paymentData = [
+                        'orderCode' => $order->id,
+                        'amount' => (int)$total,
+                        'description' => 'SGS-' . $order->id,
+                        'cancelUrl' => $baseUrl . '/checkout?status=cancelled&order_id=' . $order->id,
+                        'returnUrl' => $baseUrl . '/profile?tab=orders&status=success&order_id=' . $order->id,
+                    ];
+
+                    $payOSResponse = $payOS->createPaymentLink($paymentData);
+                } catch (\Exception $payOSError) {
+                    \Illuminate\Support\Facades\Log::warning('PayOS Link Creation Failed: ' . $payOSError->getMessage());
+                    // Fallback to active order status
+                    $order->status = 'new';
+                    $order->save();
+                }
+            } elseif ($isQrPayment) {
+                // If QR payment but PayOS not reachable, mark order as new (COD-like behavior)
+                $order->status = 'new';
+                $order->save();
+            }
+
             // clear cart only if this is NOT a buy-now checkout
             if (!$isBuyNow) {
                 Cart::query()->where(['user_id' => $user->id])->delete();
             }
 
             DB::commit();
-            return response()->json(['data' => $order], 201);
+
+            $responsePayload = ['data' => $order];
+            if ($payOSResponse) {
+                $responsePayload['checkout_url'] = $payOSResponse['checkoutUrl'] ?? '';
+                $responsePayload['qr_code'] = $payOSResponse['qrCode'] ?? '';
+            }
+
+            return response()->json($responsePayload, 201);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['message' => 'Checkout failed', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Webhook xử lý phản hồi thanh toán thành công từ PayOS
+     */
+    public function payosWebhook(Request $request)
+    {
+        $clientId = env('PAYOS_CLIENT_ID');
+        $apiKey = env('PAYOS_API_KEY');
+        $checksumKey = env('PAYOS_CHECKSUM_KEY');
+
+        if (!$clientId || !$apiKey || !$checksumKey) {
+            return response()->json(['success' => false, 'message' => 'PayOS credentials not configured'], 500);
+        }
+
+        $payOS = new PayOS($clientId, $apiKey, $checksumKey);
+
+        try {
+            // Verify webhook signature and retrieve transaction data
+            $webhookData = $payOS->verifyPaymentWebhookData($request->all());
+
+            $orderId = $webhookData['orderCode'];
+            $order = Order::find($orderId);
+
+            if ($order && $order->status === 'pending') {
+                $order->status = 'new'; // 'new' is 'Đang chờ duyệt'
+                $order->payment_status = 'paid';
+                $order->save();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Webhook processed successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Webhook processing failed: ' . $e->getMessage()
+            ], 400);
         }
     }
 }
