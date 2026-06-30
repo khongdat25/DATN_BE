@@ -9,6 +9,7 @@ use App\Http\Controllers\CategoryApi;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\VoucherController;
 
 /*
 |--------------------------------------------------------------------------
@@ -69,6 +70,8 @@ Route::middleware('auth:api')->group(function () {
 
     // Thanh toán (Checkout)
     Route::post('/checkout', [CheckoutController::class, 'store']);
+    Route::get('/vouchers/available', [VoucherController::class, 'getAvailableVouchers']);
+    Route::post('/vouchers/apply', [VoucherController::class, 'applyVoucher']);
 
     // CRUD product
     Route::get('adminproduct', [ProductApi::class, 'admin_product']);
@@ -111,6 +114,9 @@ Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
     Route::get('/orders', [OrderController::class, 'adminIndex']);
     Route::post('/orders/{id}/status', [OrderController::class, 'adminUpdateStatus']);
     Route::delete('/orders/{id}', [OrderController::class, 'adminDestroy']);
+
+    // Quản lý Vouchers (Admin)
+    Route::apiResource('/vouchers', VoucherController::class);
 });
 
 

@@ -18,13 +18,14 @@ class CheckoutController extends Controller
         $user = $request->user();
 
         $data = $request->validate([
-            'name' => 'sometimes|nullable|string',
+            'name' => 'required|string',
             'email' => 'sometimes|nullable|email',
-            'phone' => 'sometimes|nullable|string',
-            'address' => 'sometimes|nullable|string',
+            'phone' => 'required|string',
+            'address' => 'required|string',
             'note' => 'sometimes|nullable|string',
             'payment_method_id' => 'sometimes|nullable|integer',
             'voucher_id' => 'sometimes|nullable|integer',
+            'shipping_fee' => 'sometimes|numeric|min:0',
             'variant_id' => 'nullable|integer',
             'quantity' => 'nullable|integer|min:1',
         ]);
@@ -55,6 +56,32 @@ class CheckoutController extends Controller
             $price = $item->variant->price ?? 0;
             $total += $price * $item->quantity;
         }
+
+        $shippingFee = $data['shipping_fee'] ?? 0;
+
+        // Apply voucher discount if any
+        if (!empty($data['voucher_id'])) {
+            $voucher = \App\Models\Voucher::find($data['voucher_id']);
+            if ($voucher && $voucher->status === 'active' && \Carbon\Carbon::now()->startOfDay()->lte(\Carbon\Carbon::parse($voucher->end_date))) {
+                if ($total >= $voucher->min_order) {
+                    $discount = 0;
+                    if ($voucher->type === 'percent') {
+                        $discount = ($total * $voucher->value) / 100;
+                        if ($voucher->max_discount && $discount > $voucher->max_discount) {
+                            $discount = $voucher->max_discount;
+                        }
+                    } elseif ($voucher->type === 'fixed') {
+                        $discount = $voucher->value;
+                    } elseif ($voucher->type === 'free_ship') {
+                        $discount = min($shippingFee, $voucher->value);
+                    }
+                    $total = max(0, $total - $discount);
+                    $voucher->increment('used_count');
+                }
+            }
+        }
+
+        $total += $shippingFee;
 
         DB::beginTransaction();
         try {
