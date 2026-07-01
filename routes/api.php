@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\flashsale;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +22,12 @@ use App\Http\Controllers\VoucherController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+Route::get('/flash-sale', [flashsale::class, 'show']); /*lọc status 1 2 3 với 1 = đang chạy, 2 = sắp diễn ra/ ngưng, 3 = đã kết thúc*/
+Route::delete('/flash-sale/delete/{id}', [flashsale::class, 'destroy']);
+Route::post('/flash-sale/add', [flashsale::class, 'add']);
+Route::put('/flash-sale/edit/{id}', [flashsale::class, 'edit']);
+Route::patch('/flash-sale/toggle-cate/{id}', [flashsale::class, 'togglecate']);
+Route::patch('/flash-sale/end-camp/{id}', [flashsale::class, 'endcamp']);
 
 
 //lấy tên brand + category
