@@ -22,7 +22,7 @@ class ProductApi extends Controller
     public function index()
     {
         $products = ProductModel::query()->with([
-            'variants:id,product_id,size_id,color_id,sku,stock,price,image',
+            'variants:id,product_id,size_id,color_id,sku,stock,price,sale,image',
             'brand:id,name',
             'category:id,name'
         ])
@@ -203,7 +203,7 @@ class ProductApi extends Controller
            $products = ProductModel::query()
             ->select(['id','name','slug','sold','category_id','brand_id','images'])
             ->with([
-                'variants:id,product_id,size_id,color_id,sku,stock,price,image',
+                'variants:id,product_id,size_id,color_id,sku,stock,price,sale,image',
                 'variants.color:id,name',
                 'variants.size:id,name',
                 'brand:id,name',
@@ -274,7 +274,7 @@ class ProductApi extends Controller
         $products = ProductModel::query()
         ->with
         ([
-            'variants:product_id,size_id,color_id,sku,stock,price,sale,image',
+            'variants:id,product_id,size_id,color_id,sku,stock,price,sale,image',
             'variants.color:id,name',
             'variants.size:id,name',
             'brand:id,name',
@@ -309,12 +309,28 @@ class ProductApi extends Controller
 
     function product_delete(int $id){
         $product = ProductModel::find($id, ['*']);
-         if (!$product) {
-        return response()->json(['success' => false, 'message' => 'no product found'], 404);
+        if (!$product) {
+            return response()->json(['success' => false, 'message' => 'no product found'], 404);
         }
+
+        // Kiểm tra xem sản phẩm có biến thể nào nằm trong đơn hàng đang xử lý/giao hàng không
+        $variantIds = $product->variants()->pluck('id');
+        $hasActiveOrders = DB::table('order_item')
+            ->join('orders', 'order_item.order_id', '=', 'orders.id')
+            ->whereIn('order_item.variant_id', $variantIds)
+            ->whereIn('orders.status', ['new', 'pending', 'shipping'])
+            ->exists();
+
+        if ($hasActiveOrders) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể xóa sản phẩm này vì đang có đơn hàng chờ duyệt, chờ xử lý hoặc đang giao hàng chứa sản phẩm này!'
+            ], 400);
+        }
+
         $product->variants()->delete();
         $product->delete();
-         return response()->json(
+        return response()->json(
         [
             'success' => true,
             'message' => 'product deleted',
@@ -322,8 +338,22 @@ class ProductApi extends Controller
     }
 
     function variant_delete(Variant $v){
+        // Kiểm tra xem biến thể có nằm trong đơn hàng đang xử lý/giao hàng không
+        $hasActiveOrders = DB::table('order_item')
+            ->join('orders', 'order_item.order_id', '=', 'orders.id')
+            ->where('order_item.variant_id', '=', $v->id)
+            ->whereIn('orders.status', ['new', 'pending', 'shipping'])
+            ->exists();
+
+        if ($hasActiveOrders) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể xóa biến thể này vì đang có đơn hàng chờ duyệt, chờ xử lý hoặc đang giao hàng chứa nó!'
+            ], 400);
+        }
+
         Variant::destroy($v->id);
-         return response()->json([
+        return response()->json([
             'success' => true,
             'message' => 'variant deleted',
         ],200);
@@ -337,6 +367,24 @@ class ProductApi extends Controller
         'variants'    => 'required|array',
         'images'      => 'nullable|array',
         ]);
+
+        // Kiểm tra trùng lặp size_id và color_id trong các biến thể
+        $seenCombinations = [];
+        foreach ($request->variants as $variant) {
+            $sizeId = $variant['size_id'] ?? null;
+            $colorId = $variant['color_id'] ?? null;
+            if ($sizeId && $colorId) {
+                $key = "{$sizeId}-{$colorId}";
+                if (in_array($key, $seenCombinations)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Lỗi: Tồn tại các biến thể trùng lặp kích cỡ và màu sắc!'
+                    ], 422);
+                }
+                $seenCombinations[] = $key;
+            }
+        }
+
         DB::beginTransaction();
 
         try {
@@ -407,6 +455,23 @@ class ProductApi extends Controller
         return response()->json(['success' => false, 'message' => 'Không tìm thấy sản phẩm!'], 404);
         }
 
+        // Kiểm tra trùng lặp size_id và color_id trong các biến thể
+        $seenCombinations = [];
+        foreach ($request->variants as $variant) {
+            $sizeId = $variant['size_id'] ?? null;
+            $colorId = $variant['color_id'] ?? null;
+            if ($sizeId && $colorId) {
+                $key = "{$sizeId}-{$colorId}";
+                if (in_array($key, $seenCombinations)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Lỗi: Tồn tại các biến thể trùng lặp kích cỡ và màu sắc!'
+                    ], 422);
+                }
+                $seenCombinations[] = $key;
+            }
+        }
+
         DB::beginTransaction();
 
         try {
@@ -466,9 +531,32 @@ class ProductApi extends Controller
                 $keepVariantIds[] = $newVariant->id;
             }
         }
-        Variant::query()->where(['product_id' => $product->id])
+        $variantsToDelete = Variant::query()
+            ->where('product_id', $product->id)
             ->whereNotIn('id', $keepVariantIds)
-            ->delete();
+            ->get();
+
+        foreach ($variantsToDelete as $vToDelete) {
+            $hasActiveOrders = DB::table('order_item')
+                ->join('orders', 'order_item.order_id', '=', 'orders.id')
+                ->where('order_item.variant_id', '=', $vToDelete->id)
+                ->whereIn('orders.status', ['new', 'pending', 'shipping'])
+                ->exists();
+
+            if ($hasActiveOrders) {
+                $sizeName = $vToDelete->size ? $vToDelete->size->name : $vToDelete->size_id;
+                $colorName = $vToDelete->color ? $vToDelete->color->name : $vToDelete->color_id;
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => "Không thể xóa biến thể (Size {$sizeName} - Màu {$colorName}) vì đang có đơn hàng chờ duyệt, chờ xử lý hoặc đang giao hàng chứa nó!"
+                ], 400);
+            }
+        }
+
+        foreach ($variantsToDelete as $vToDelete) {
+            $vToDelete->delete();
+        }
 
         DB::commit();
 

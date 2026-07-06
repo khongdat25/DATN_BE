@@ -47,44 +47,98 @@ class CheckoutController extends Controller
         } else {
             $cartItems = Cart::query()->with('variant')->where(['user_id' => $user->id])->get();
             if ($cartItems->isEmpty()) {
+                \Illuminate\Support\Facades\Log::warning("Checkout failed: Cart is empty for user " . $user->id);
                 return response()->json(['message' => 'Cart is empty'], 400);
             }
         }
 
-        $total = 0;
-        foreach ($cartItems as $item) {
-            $price = $item->variant->price ?? 0;
-            $total += $price * $item->quantity;
-        }
-
         $shippingFee = $data['shipping_fee'] ?? 0;
-
-        // Apply voucher discount if any
-        if (!empty($data['voucher_id'])) {
-            $voucher = \App\Models\Voucher::find($data['voucher_id']);
-            if ($voucher && $voucher->status === 'active' && \Carbon\Carbon::now()->startOfDay()->lte(\Carbon\Carbon::parse($voucher->end_date))) {
-                if ($total >= $voucher->min_order) {
-                    $discount = 0;
-                    if ($voucher->type === 'percent') {
-                        $discount = ($total * $voucher->value) / 100;
-                        if ($voucher->max_discount && $discount > $voucher->max_discount) {
-                            $discount = $voucher->max_discount;
-                        }
-                    } elseif ($voucher->type === 'fixed') {
-                        $discount = $voucher->value;
-                    } elseif ($voucher->type === 'free_ship') {
-                        $discount = min($shippingFee, $voucher->value);
-                    }
-                    $total = max(0, $total - $discount);
-                    $voucher->increment('used_count');
-                }
-            }
-        }
-
-        $total += $shippingFee;
 
         DB::beginTransaction();
         try {
+            $total = 0;
+            foreach ($cartItems as $item) {
+                $price = $item->variant->price ?? 0;
+                $total += $price * $item->quantity;
+            }
+
+            $appliedVoucherId = null;
+
+            // Apply voucher discount if any
+            if (!empty($data['voucher_id'])) {
+                $voucher = \App\Models\Voucher::where('id', '=', $data['voucher_id'], 'and')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$voucher) {
+                    DB::rollBack();
+                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher not found for user " . $user->id);
+                    return response()->json(['message' => 'Mã giảm giá không tồn tại'], 400);
+                }
+
+                $now = \Carbon\Carbon::now();
+
+                if ($voucher->status !== 'active') {
+                    DB::rollBack();
+                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher inactive for user " . $user->id);
+                    return response()->json(['message' => 'Mã giảm giá đã bị khóa hoặc không hoạt động'], 400);
+                }
+
+                if ($voucher->start_date && $now->startOfDay()->lt(\Carbon\Carbon::parse($voucher->start_date))) {
+                    DB::rollBack();
+                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher not started for user " . $user->id);
+                    return response()->json(['message' => 'Mã giảm giá chưa đến thời gian bắt đầu'], 400);
+                }
+
+                if ($voucher->end_date && $now->startOfDay()->gt(\Carbon\Carbon::parse($voucher->end_date))) {
+                    DB::rollBack();
+                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher expired for user " . $user->id);
+                    return response()->json(['message' => 'Mã giảm giá đã hết hạn hoặc bị khóa'], 400);
+                }
+
+                if ($voucher->used_count >= $voucher->total_usage) {
+                    DB::rollBack();
+                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher fully used for user " . $user->id);
+                    return response()->json(['message' => 'Mã giảm giá đã hết lượt sử dụng'], 400);
+                }
+
+                // Check if user has already used this voucher
+                $alreadyUsed = Order::where('user_id', '=', $user->id, 'and')
+                    ->where('voucher_id', '=', $voucher->id, 'and')
+                    ->where('status', '!=', 'cancelled', 'and')
+                    ->exists();
+
+                if ($alreadyUsed) {
+                    DB::rollBack();
+                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher already used by user " . $user->id);
+                    return response()->json(['message' => 'Bạn đã sử dụng mã giảm giá này rồi'], 400);
+                }
+
+                if ($total < $voucher->min_order) {
+                    DB::rollBack();
+                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Order total less than min_order for user " . $user->id);
+                    return response()->json(['message' => 'Đơn hàng chưa đạt giá trị tối thiểu để sử dụng mã này'], 400);
+                }
+
+                $discount = 0;
+                if ($voucher->type === 'percent') {
+                    $discount = ($total * $voucher->value) / 100;
+                    if ($voucher->max_discount && $discount > $voucher->max_discount) {
+                        $discount = $voucher->max_discount;
+                    }
+                } elseif ($voucher->type === 'fixed') {
+                    $discount = $voucher->value;
+                } elseif ($voucher->type === 'free_ship') {
+                    $discount = min($shippingFee, $voucher->value);
+                }
+
+                $total = max(0, $total - $discount);
+                $voucher->increment('used_count');
+                $appliedVoucherId = $voucher->id;
+            }
+
+            $total += $shippingFee;
+
             $clientId = env('PAYOS_CLIENT_ID');
             $apiKey = env('PAYOS_API_KEY');
             $checksumKey = env('PAYOS_CHECKSUM_KEY');
@@ -100,14 +154,32 @@ class CheckoutController extends Controller
                 'address' => $data['address'] ?? null,
                 'note' => $data['note'] ?? null,
                 'total_amount' => $total,
-                'voucher_id' => $data['voucher_id'] ?? null,
+                'voucher_id' => $appliedVoucherId,
                 'payment_method_id' => $data['payment_method_id'] ?? null,
                 'payment_status' => 'pending',
                 'status' => ($isQrPayment && $clientId) ? 'pending' : 'new',
             ]);
 
             foreach ($cartItems as $item) {
-                $variant = Variant::find($item->variant_id, ['*']);
+                $variant = Variant::where('id', '=', $item->variant_id, 'and')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$variant) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Sản phẩm hoặc biến thể không tồn tại'], 404);
+                }
+
+                if (isset($variant->stock) && $variant->stock < $item->quantity) {
+                    DB::rollBack();
+                    $productName = $variant->product->name ?? 'Sản phẩm';
+                    $sizeName = $variant->size->name ?? $variant->size_id;
+                    $colorName = $variant->color->name ?? $variant->color_id;
+                    return response()->json([
+                        'message' => "Sản phẩm {$productName} (Size {$sizeName} - Màu {$colorName}) không đủ số lượng trong kho (Hiện còn {$variant->stock})"
+                    ], 400);
+                }
+
                 $price = $variant->price ?? 0;
 
                 OrderItem::create([
@@ -118,7 +190,7 @@ class CheckoutController extends Controller
                 ]);
 
                 // decrement stock if available
-                if ($variant && isset($variant->stock)) {
+                if (isset($variant->stock)) {
                     $variant->stock = max(0, $variant->stock - $item->quantity);
                     $variant->save();
                 }
@@ -204,7 +276,7 @@ class CheckoutController extends Controller
             $webhookData = $payOS->verifyPaymentWebhookData($request->all());
 
             $orderId = $webhookData['orderCode'];
-            $order = Order::find($orderId);
+            $order = Order::find($orderId, ['*']);
 
             if ($order && $order->status === 'pending') {
                 $order->status = 'new'; // 'new' is 'Đang chờ duyệt'

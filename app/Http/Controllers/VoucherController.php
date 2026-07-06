@@ -35,16 +35,16 @@ class VoucherController extends Controller
         return response()->json(['success' => true, 'data' => $voucher], 201);
     }
 
-    public function show($id)
+    public function show(int $id)
     {
-        $voucher = Voucher::find($id);
+        $voucher = Voucher::find($id, ['*']);
         if (!$voucher) return response()->json(['success' => false, 'message' => 'Voucher not found'], 404);
         return response()->json(['success' => true, 'data' => $voucher], 200);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
-        $voucher = Voucher::find($id);
+        $voucher = Voucher::find($id, ['*']);
         if (!$voucher) return response()->json(['success' => false, 'message' => 'Voucher not found'], 404);
 
         $validated = $request->validate([
@@ -64,9 +64,9 @@ class VoucherController extends Controller
         return response()->json(['success' => true, 'data' => $voucher], 200);
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
-        $voucher = Voucher::find($id);
+        $voucher = Voucher::find($id, ['*']);
         if (!$voucher) return response()->json(['success' => false, 'message' => 'Voucher not found'], 404);
         $voucher->delete();
         return response()->json(['success' => true, 'message' => 'Voucher deleted'], 200);
@@ -74,13 +74,27 @@ class VoucherController extends Controller
 
     // === API for User Checkout ===
 
-    public function getAvailableVouchers()
+    public function getAvailableVouchers(Request $request)
     {
-        $vouchers = Voucher::where('status', 'active')
+        $user = $request->user();
+
+        $vouchers = Voucher::where('status', '=', 'active', 'and')
             ->whereDate('start_date', '<=', Carbon::now())
             ->whereDate('end_date', '>=', Carbon::now())
             ->whereColumn('used_count', '<', 'total_usage')
             ->get();
+
+        if ($user) {
+            $usedVoucherIds = \App\Models\Order::where('user_id', '=', $user->id, 'and')
+                ->whereNotNull('voucher_id')
+                ->where('status', '!=', 'cancelled', 'and')
+                ->pluck('voucher_id')
+                ->toArray();
+
+            $vouchers = $vouchers->filter(function ($voucher) use ($usedVoucherIds) {
+                return !in_array($voucher->id, $usedVoucherIds);
+            })->values();
+        }
 
         return response()->json(['success' => true, 'data' => $vouchers], 200);
     }
@@ -93,7 +107,7 @@ class VoucherController extends Controller
             'shipping_fee' => 'sometimes|numeric|min:0'
         ]);
 
-        $voucher = Voucher::where('code', $request->code)->first();
+        $voucher = Voucher::where('code', '=', $request->code, 'and')->first();
 
         if (!$voucher) {
             return response()->json(['success' => false, 'message' => 'Mã giảm giá không tồn tại'], 404);
@@ -109,6 +123,19 @@ class VoucherController extends Controller
 
         if ($voucher->used_count >= $voucher->total_usage) {
             return response()->json(['success' => false, 'message' => 'Mã giảm giá đã hết lượt sử dụng'], 400);
+        }
+
+        // Check if user has already used this voucher
+        $user = $request->user();
+        if ($user) {
+            $alreadyUsed = \App\Models\Order::where('user_id', '=', $user->id, 'and')
+                ->where('voucher_id', '=', $voucher->id, 'and')
+                ->where('status', '!=', 'cancelled', 'and')
+                ->exists();
+
+            if ($alreadyUsed) {
+                return response()->json(['success' => false, 'message' => 'Bạn đã sử dụng mã giảm giá này rồi'], 400);
+            }
         }
 
         if ($request->subtotal < $voucher->min_order) {
