@@ -11,6 +11,9 @@ use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\flashsale;
+use App\Http\Controllers\SizeController;
+use App\Http\Controllers\ColorController;
+use App\Http\Controllers\BrandController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,14 +24,33 @@ use App\Http\Controllers\flashsale;
 | routes are loaded by the RouteServiceProvider and all of them will
 | be assigned to the "api" middleware group. Make something great!
 |
-*/
+*/ /*crud flashsale cần sửa */
 Route::get('/flash-sale', [flashsale::class, 'show']); /*lọc status 1 2 3 với 1 = đang chạy, 2 = sắp diễn ra/ ngưng, 3 = đã kết thúc*/
 Route::delete('/flash-sale/delete/{id}', [flashsale::class, 'destroy']);
 Route::post('/flash-sale/add', [flashsale::class, 'add']);
 Route::put('/flash-sale/edit/{id}', [flashsale::class, 'edit']);
 Route::patch('/flash-sale/toggle-cate/{id}', [flashsale::class, 'togglecate']);
 Route::patch('/flash-sale/end-camp/{id}', [flashsale::class, 'endcamp']);
+/*crud size, color,  */
+Route:: get('/size', [SizeController::class, 'index']);
+Route::post('/size/add', [SizeController::class, 'add']);
+Route::put('/size/edit/{id}', [SizeController::class, 'edit']);
+Route::patch('/size/toggle-cate/{id}', [SizeController::class, 'togglecate']);
+Route::delete('/size/delete/{size}', [SizeController::class, 'destroy']);
 
+/*crud color */
+Route:: get('/color', [ColorController::class, 'index']);
+Route::post('/color/add', [ColorController::class, 'add']);
+Route::put('/color/edit/{id}', [ColorController::class, 'edit']);
+Route::patch('/color/toggle-cate/{id}', [ColorController::class, 'togglecate']);
+Route::delete('/color/delete/{color}', [ColorController::class, 'destroy']);
+
+//crud brand
+Route:: get('/brand', [BrandController::class, 'index']);
+Route::post('/brand/add', [BrandController::class, 'add']);
+Route::put('/brand/edit/{id}', [BrandController::class, 'edit']);
+Route::patch('/brand/toggle-cate/{id}', [BrandController::class, 'togglecate']);
+Route::delete('/brand/delete/{brand}', [BrandController::class, 'destroy']);
 
 //lấy tên brand + category
 Route::get('/getbrands', [ProductApi::class, 'getBrands']);

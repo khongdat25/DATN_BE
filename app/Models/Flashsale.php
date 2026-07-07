@@ -14,7 +14,7 @@ class Flashsale extends Model
     use SoftDeletes;
     public $timestamps = false; 
     protected $table = 'flash_sales';
-    protected $fillable = ['name', 'start_time', 'end_time', 'status'];
+    protected $fillable = ['name', 'start_time', 'end_time', 'status','deleted_at'];
     protected $appends = ['date', 'timeSlot', 'discountPercent'];
     public function items(){ 
         return $this->hasMany(Flashsaleitem::class, 'flash_sale_id'); 
