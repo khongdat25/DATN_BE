@@ -25,7 +25,7 @@ class ProductModel extends Model
         'description',
         'status', 
         'sold',
-        'images'
+        'images',
     ];
     public $timestamps = false;
     protected $appends = ['avg_rating','min_price','max_price','image_urls'];

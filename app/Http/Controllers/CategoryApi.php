@@ -51,7 +51,10 @@ class CategoryApi extends Controller
         $request->validate([
         'name'        => 'required|string',
         'slug'    => 'required|string',
-        'description'    => 'required|string',
+        'description' => 'nullable|string',
+        ], [   
+        'name.unique' => 'Tên danh mục này đã tồn tại.',
+        'slug.unique' => 'Slug danh mục này đã tồn tại.',
         ]);
      $category = Category::create([
             'name'        => $request->name,
@@ -67,10 +70,13 @@ class CategoryApi extends Controller
 
     function edit(Request $request, $id){
         $request->validate([
-        'name'          => 'required|string',
-        'slug'          => 'required|string',
-        'description'   => 'required|string',
+        'name'        => 'required|string|unique:categories,name,' . $id,
+        'slug'        => 'required|string|unique:categories,slug,' . $id,
+        'description' => 'nullable|string',
         'status'        =>  'required'
+        ],[
+        'name.unique' => 'Tên danh mục này đã tồn tại ở một danh mục khác.',
+        'slug.unique' => 'Slug danh mục này đã tồn tại ở một danh mục khác.',
         ]);
         $category = Category::findOrFail($id);
 
