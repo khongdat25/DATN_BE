@@ -15,6 +15,9 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\AddressController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\flashsale;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +29,12 @@ use App\Http\Controllers\Api\V1\AddressController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+Route::get('/flash-sale', [flashsale::class, 'show']); /*lọc status 1 2 3 với 1 = đang chạy, 2 = sắp diễn ra/ ngưng, 3 = đã kết thúc*/
+Route::delete('/flash-sale/delete/{id}', [flashsale::class, 'destroy']);
+Route::post('/flash-sale/add', [flashsale::class, 'add']);
+Route::put('/flash-sale/edit/{id}', [flashsale::class, 'edit']);
+Route::patch('/flash-sale/toggle-cate/{id}', [flashsale::class, 'togglecate']);
+Route::patch('/flash-sale/end-camp/{id}', [flashsale::class, 'endcamp']);
 
 
 //lấy tên brand + category
@@ -55,6 +64,9 @@ Route::post('/login/google', [AuthController::class, 'loginWithGoogle']);
 Route::post('/forgot-password', [AuthController::class, 'sendResetLinkEmail']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
+// Webhook thanh toán PayOS
+Route::post('/payment/payos-webhook', [CheckoutController::class, 'payosWebhook']);
+
 // API yêu cầu xác thực JWT (Guard: api)
 Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -79,6 +91,8 @@ Route::middleware('auth:api')->group(function () {
 
     // Thanh toán (Checkout)
     Route::post('/checkout', [CheckoutController::class, 'store']);
+    Route::get('/vouchers/available', [VoucherController::class, 'getAvailableVouchers']);
+    Route::post('/vouchers/apply', [VoucherController::class, 'applyVoucher']);
 
     // CRUD product
     Route::get('adminproduct', [ProductApi::class, 'admin_product']);
@@ -88,12 +102,18 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('variant/{v}', [ProductApi::class, 'variant_delete']);
     Route::delete('product/{id}', [ProductApi::class, 'product_delete']);
 
-    //crud danh mục
+    // CRUD danh mục
     Route::get('admincategory', [CategoryApi::class, 'admin_category']);
     Route::post('category_add', [CategoryApi::class, 'add']);
     Route::post('category_edit/{id}', [CategoryApi::class, 'edit']);
     Route::patch('toggle/{id}', [CategoryApi::class, 'togglecate']);
     Route::delete('category/{category}', [CategoryApi::class, 'destroy']);
+
+    // Đơn hàng (Orders) cho User
+    Route::get('/user/orders', [OrderController::class, 'userIndex']);
+    Route::get('/user/orders/{id}', [OrderController::class, 'userShow']);
+    Route::delete('/user/orders/{id}', [OrderController::class, 'userDestroy']);
+    Route::post('/user/orders/{id}/cancel', [OrderController::class, 'userCancel']);
 
 });
 
@@ -263,6 +283,13 @@ Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
     Route::get('/contacts/{id}', [ContactController::class, 'show']);
     Route::put('/contacts/{id}', [ContactController::class, 'update']);
     Route::delete('/contacts/{id}', [ContactController::class, 'destroy']);
+    // Quản lý đơn hàng (Orders) cho Admin
+    Route::get('/orders', [OrderController::class, 'adminIndex']);
+    Route::post('/orders/{id}/status', [OrderController::class, 'adminUpdateStatus']);
+    Route::delete('/orders/{id}', [OrderController::class, 'adminDestroy']);
+
+    // Quản lý Vouchers (Admin)
+    Route::apiResource('/vouchers', VoucherController::class);
 });
 
 

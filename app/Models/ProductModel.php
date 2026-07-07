@@ -28,7 +28,7 @@ class ProductModel extends Model
         'images'
     ];
     public $timestamps = false;
-    protected $appends = ['avg_rating','min_price','image_urls'];
+    protected $appends = ['avg_rating','min_price','max_price','image_urls'];
     
       public function category()
     {
@@ -52,16 +52,14 @@ class ProductModel extends Model
         }
         return round($this->rating()->avg('rating') ?? 0, 1);
     }
-    public function getMinPriceAttribute()
-    {
-        if (array_key_exists('min_price', $this->attributes)) {
-            return $this->attributes['min_price'];
-        }
-        if ($this->relationLoaded('variants')) {
-            return $this->variants->min(fn($v) => $v->price);
-        }
-        return $this->variants()->min('price');
-    }
+   
+public function getMinPriceAttribute() {
+    return $this->variants->min('price') ?? 0;
+}
+
+public function getMaxPriceAttribute() {
+    return $this->variants->max('price') ?? 0;
+}
 
     public function getImageUrlsAttribute()
     {
