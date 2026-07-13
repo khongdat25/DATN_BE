@@ -83,14 +83,25 @@ class ProductApi extends Controller
 
      public function FlashSale(){
         $now = Carbon::now();
-       $flashSales = Flashsale::query()->with(['items:id,flash_sale_id,sold,quantity_limit,discount_value,product_id',
-                                        'items.product:id,name,slug,sold,images',
-                                        'items.product.variants:product_id,id,image,price,sale'])
+       $flashSales = Flashsale::query()->with(['items:id,flash_sale_id,sold,quantity_limit,discount_value,product_variant_id',
+                                        'items.productVariant:id,product_id,size_id,color_id,image,stock,price',
+                                        'items.productVariant.product:id,name,slug,category_id,brand_id'])
                                                 ->where(['status' => 1])
-                                                ->whereDate('start_time', '<=', $now)
-                                                ->whereDate('end_time', '>=', $now)
+                                                ->where('start_time', '<=', $now)
+                                                ->where('end_time', '>=', $now)
                                                 ->take(5)
                                                 ->get();
+
+    $flashSales->each(function ($flashSale) {
+        $flashSale->items->each(function ($item) {
+            $product = $item->productVariant?->product;
+            if ($product) {
+                $product->unsetRelation('variants');
+                $product->makeHidden(['variants']);
+            }
+        });
+    });
+
         return response()->json(
         [
             'success' => true,
