@@ -22,13 +22,24 @@ class flashsale extends Controller
         ->with([
 
         'items' => function($q) {
-            $q->select('id', 'flash_sale_id', 'product_id', 'discount_value', 'quantity_limit', 'sold');
+            $q->select('id', 'flash_sale_id', 'product_variant_id', 'discount_value', 'quantity_limit', 'sold');
             },
-        'items.product',
-        'items.product.variants'=> function($q) {
-            $q->select('id', 'product_id', 'price');
+        'items.productVariant',
+        'items.productVariant.product' => function($q) {
+            $q->select('id', 'name', 'slug', 'category_id', 'brand_id');
         }
         ])->get(['id', 'name', 'start_time', 'end_time', 'status']); 
+
+
+     $sale->each(function ($flashSale) {
+        $flashSale->items->each(function ($item) {
+            $product = $item->productVariant?->product;
+            if ($product) {
+                $product->unsetRelation('variants');
+                $product->makeHidden(['variants']);
+            }
+        });
+    });
             return response()->json(
         [
             'success' => true,
@@ -63,8 +74,8 @@ class flashsale extends Controller
         'end_hour'        => 'required|date_format:H:i',    
         'discount_value'  => 'required|numeric|min:0|max:100',
         'quantity_limit'  => 'required|integer|min:1',
-        'product_ids'     => 'required|array',
-        'product_ids.*'   => 'required|integer'
+        'product_variant_ids'     => 'required|array',
+        'product_variant_ids.*'   => 'required|integer'
     ]);
     DB::beginTransaction();
 
@@ -77,10 +88,10 @@ class flashsale extends Controller
             'start_time' => $startedTime,
             'end_time'     => $endTime,
         ]);
-        foreach($request->product_ids as $item) {
+        foreach($request->product_variant_ids as $item) {
             Flashsaleitem::create([
                 'flash_sale_id' => $create->id,
-                'product_id'    => $item,
+                'product_variant_id'    => $item,
                 'discount_value' => $request->discount_value,
                 'quantity_limit' => $request->quantity_limit,
                 ]);
@@ -122,8 +133,8 @@ class flashsale extends Controller
         'end_hour'        => 'required|date_format:H:i',    
         'discount_value'  => 'required|numeric|min:0|max:100',
         'quantity_limit'  => 'required|integer|min:1',
-        'product_ids'     => 'required|array',
-        'product_ids.*'   => 'required|integer'
+        'product_variant_ids'     => 'required|array',
+        'product_variant_ids.*'   => 'required|integer'
     ]);
 
     DB::beginTransaction();
@@ -139,10 +150,10 @@ class flashsale extends Controller
             'end_time'   => $endTime,
         ]);
         Flashsaleitem::where('flash_sale_id', $flashSale->id)->delete();
-        foreach($request->product_ids as $item) {
+        foreach($request->product_variant_ids as $item) {
             Flashsaleitem::create([
                 'flash_sale_id'  => $flashSale->id,
-                'product_id'     => $item, 
+                'product_variant_id'     => $item, 
                 'discount_value' => $request->discount_value,
                 'quantity_limit' => $request->quantity_limit,
             ]);
