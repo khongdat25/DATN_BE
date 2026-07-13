@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use App\Models\Blogs;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -24,7 +23,7 @@ class BlogController extends Controller
 
         // Tìm kiếm theo tiêu đề
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->input('search') . '%');
+            $query->where('name', 'like', '%'.$request->input('search').'%');
         }
 
         // Sắp xếp bài viết mới nhất lên đầu
@@ -37,23 +36,40 @@ class BlogController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Lấy danh sách tin tức thành công.',
-            'data' => $blogs
+            'data' => $blogs,
+        ], 200);
+    }
+
+    /**
+     * Admin: Lấy danh sách toàn bộ tin tức.
+     */
+    public function adminIndex()
+    {
+        $blogs = Blogs::orderBy('created_at', 'desc')->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lấy danh sách tin tức admin thành công.',
+            'data' => [
+                'data' => $blogs,
+            ],
         ], 200);
     }
 
     /**
      * Xem chi tiết một bài viết bằng ID hoặc Slug.
      */
-    public function show($slugOrId)
+    public function show(string|int $slugOrId)
     {
-        $blog = Blogs::where('slug', $slugOrId)
-            ->orWhere('id', $slugOrId)
+        $blog = Blogs::query()
+            ->where('slug', '=', $slugOrId)
+            ->orWhere('id', '=', $slugOrId)
             ->first();
 
-        if (!$blog) {
+        if (! $blog) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không tìm thấy bài viết!'
+                'message' => 'Không tìm thấy bài viết!',
             ], 404);
         }
 
@@ -63,7 +79,7 @@ class BlogController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Lấy chi tiết bài viết thành công.',
-            'data' => $blog
+            'data' => $blog,
         ], 200);
     }
 
@@ -80,14 +96,14 @@ class BlogController extends Controller
             'featuring' => 'sometimes|boolean',
         ], [
             'name.required' => 'Tiêu đề bài viết là bắt buộc.',
-            'content.required' => 'Nội dung bài viết là bắt buộc.'
+            'content.required' => 'Nội dung bài viết là bắt buộc.',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Dữ liệu không hợp lệ!',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -96,29 +112,29 @@ class BlogController extends Controller
             'slug' => Str::slug($request->name),
             'avatar' => $request->avatar,
             'comment' => $request->comment,
-            'content' => $request->content,
+            'content' => $request->input('content'),
             'featuring' => $request->input('featuring', false),
-            'views' => 0
+            'views' => 0,
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Tạo bài viết tin tức thành công!',
-            'data' => $blog
+            'data' => $blog,
         ], 201);
     }
 
     /**
      * Admin: Cập nhật tin tức.
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, string|int $id)
     {
-        $blog = Blogs::find($id);
+        $blog = Blogs::find($id, ['*']);
 
-        if (!$blog) {
+        if (! $blog) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không tìm thấy bài viết cần cập nhật!'
+                'message' => 'Không tìm thấy bài viết cần cập nhật!',
             ], 404);
         }
 
@@ -130,14 +146,14 @@ class BlogController extends Controller
             'featuring' => 'sometimes|boolean',
         ], [
             'name.required' => 'Tiêu đề bài viết không được để trống.',
-            'content.required' => 'Nội dung bài viết không được để trống.'
+            'content.required' => 'Nội dung bài viết không được để trống.',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Dữ liệu không hợp lệ!',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -151,21 +167,21 @@ class BlogController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Cập nhật bài viết tin tức thành công!',
-            'data' => $blog
+            'data' => $blog,
         ], 200);
     }
 
     /**
      * Admin: Xóa tin tức (Soft Delete).
      */
-    public function destroy($id)
+    public function destroy(string|int $id)
     {
-        $blog = Blogs::find($id);
+        $blog = Blogs::find($id, ['*']);
 
-        if (!$blog) {
+        if (! $blog) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không tìm thấy bài viết!'
+                'message' => 'Không tìm thấy bài viết!',
             ], 404);
         }
 
@@ -173,7 +189,7 @@ class BlogController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Xóa bài viết tin tức thành công!'
+            'message' => 'Xóa bài viết tin tức thành công!',
         ], 200);
     }
 }

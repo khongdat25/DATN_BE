@@ -4,13 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\ProductModel;
+
 class Collab extends Model
 {
     use HasFactory;
+
     protected $table = 'collabs';
+
     public function products()
-        {
-            return $this->hasMany(ProductModel::class);
-        }
+    {
+        return $this->hasMany(ProductModel::class);
+    }
 }

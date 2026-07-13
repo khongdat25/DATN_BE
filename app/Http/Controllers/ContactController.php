@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use App\Models\Contact;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class ContactController extends Controller
@@ -31,7 +30,7 @@ class ContactController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Dữ liệu gửi lên không hợp lệ!',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -41,13 +40,13 @@ class ContactController extends Controller
             'phone' => $request->phone,
             'subject' => $request->subject,
             'message' => $request->message,
-            'status' => 'pending' // mặc định là chờ xử lý
+            'status' => 'pending', // mặc định là chờ xử lý
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Gửi thông tin liên hệ thành công! Chúng tôi sẽ phản hồi sớm nhất.',
-            'data' => $contact
+            'data' => $contact,
         ], 201);
     }
 
@@ -66,10 +65,10 @@ class ContactController extends Controller
         // Tìm kiếm theo tên hoặc email
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('subject', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('subject', 'like', "%{$search}%");
             });
         }
 
@@ -81,7 +80,7 @@ class ContactController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Lấy danh sách liên hệ thành công.',
-            'data' => $contacts
+            'data' => $contacts,
         ], 200);
     }
 
@@ -92,17 +91,17 @@ class ContactController extends Controller
     {
         $contact = Contact::find($id);
 
-        if (!$contact) {
+        if (! $contact) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không tìm thấy thông tin liên hệ!'
+                'message' => 'Không tìm thấy thông tin liên hệ!',
             ], 404);
         }
 
         return response()->json([
             'success' => true,
             'message' => 'Chi tiết liên hệ.',
-            'data' => $contact
+            'data' => $contact,
         ], 200);
     }
 
@@ -113,10 +112,10 @@ class ContactController extends Controller
     {
         $contact = Contact::find($id);
 
-        if (!$contact) {
+        if (! $contact) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không tìm thấy thông tin liên hệ!'
+                'message' => 'Không tìm thấy thông tin liên hệ!',
             ], 404);
         }
 
@@ -131,18 +130,18 @@ class ContactController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Dữ liệu không hợp lệ!',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $contact->update([
-            'status' => $request->status
+            'status' => $request->status,
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Cập nhật trạng thái liên hệ thành công!',
-            'data' => $contact
+            'data' => $contact,
         ], 200);
     }
 
@@ -153,10 +152,10 @@ class ContactController extends Controller
     {
         $contact = Contact::find($id);
 
-        if (!$contact) {
+        if (! $contact) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không tìm thấy liên hệ!'
+                'message' => 'Không tìm thấy liên hệ!',
             ], 404);
         }
 
@@ -164,7 +163,7 @@ class ContactController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Xóa liên hệ thành công!'
+            'message' => 'Xóa liên hệ thành công!',
         ], 200);
     }
 }

@@ -2,11 +2,11 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Variant;
 use App\Models\Voucher;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -42,10 +42,11 @@ class CancelExpiredOrders extends Command
 
         if ($expiredOrders->isEmpty()) {
             $this->info('Không tìm thấy đơn hàng nào quá hạn.');
+
             return;
         }
 
-        $this->info('Tìm thấy ' . $expiredOrders->count() . ' đơn hàng quá hạn. Đang tiến hành hủy...');
+        $this->info('Tìm thấy '.$expiredOrders->count().' đơn hàng quá hạn. Đang tiến hành hủy...');
 
         foreach ($expiredOrders as $order) {
             DB::beginTransaction();
@@ -80,7 +81,7 @@ class CancelExpiredOrders extends Command
 
             } catch (\Exception $e) {
                 DB::rollBack();
-                $errorMsg = "Lỗi khi tự động hủy đơn hàng ID {$order->id}: " . $e->getMessage();
+                $errorMsg = "Lỗi khi tự động hủy đơn hàng ID {$order->id}: ".$e->getMessage();
                 $this->error($errorMsg);
                 Log::error($errorMsg);
             }

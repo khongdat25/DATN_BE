@@ -13,7 +13,7 @@ class Order extends Model
 
     protected $fillable = [
         'user_id', 'name', 'email', 'phone', 'address', 'note',
-        'total_amount', 'voucher_id', 'payment_method_id', 'payment_status', 'status'
+        'total_amount', 'voucher_id', 'payment_method_id', 'payment_status', 'status',
     ];
 
     public function items()
@@ -41,11 +41,11 @@ class Order extends Model
         static::updating(function ($order) {
             $isStatusChanged = $order->isDirty('status');
             $isPaymentStatusChanged = $order->isDirty('payment_status');
-            
+
             if ($isStatusChanged || $isPaymentStatusChanged) {
                 $userId = auth()->id() ?: null;
                 $userName = auth()->check() ? auth()->user()->name : null;
-                
+
                 $noteParts = [];
                 if ($isStatusChanged) {
                     $noteParts[] = 'Cập nhật trạng thái';
@@ -71,7 +71,7 @@ class Order extends Model
                 ]);
             }
         });
-        
+
         static::created(function ($order) {
             \App\Models\OrderHistory::create([
                 'order_id' => $order->id,

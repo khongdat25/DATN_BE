@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -14,7 +13,9 @@ class ResetPasswordMail extends Mailable
     use Queueable, SerializesModels;
 
     public string $token;
+
     public string $email;
+
     public string $resetUrl;
 
     /**
@@ -25,7 +26,7 @@ class ResetPasswordMail extends Mailable
         $this->token = $token;
         $this->email = $email;
         $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
-        $this->resetUrl = rtrim($frontendUrl, '/') . '/reset-password?token=' . $token . '&email=' . urlencode($email);
+        $this->resetUrl = rtrim($frontendUrl, '/').'/reset-password?token='.$token.'&email='.urlencode($email);
     }
 
     /**

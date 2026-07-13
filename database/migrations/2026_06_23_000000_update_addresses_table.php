@@ -12,13 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('addresses', function (Blueprint $table) {
-            if (!Schema::hasColumn('addresses', 'name')) {
+            if (! Schema::hasColumn('addresses', 'name')) {
                 $table->string('name')->nullable()->after('user_id');
             }
-            if (!Schema::hasColumn('addresses', 'badge')) {
+            if (! Schema::hasColumn('addresses', 'badge')) {
                 $table->string('badge')->default('Nhà riêng')->after('address');
             }
-            if (!Schema::hasColumn('addresses', 'created_at')) {
+            if (! Schema::hasColumn('addresses', 'created_at')) {
                 $table->timestamps();
             }
         });

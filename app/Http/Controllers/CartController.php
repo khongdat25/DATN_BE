@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Cart;
 use App\Models\Variant;
-use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
@@ -17,7 +16,7 @@ class CartController extends Controller
             'variant.product:id,name,slug,images,brand_id',
             'variant.product.brand:id,name',
             'variant.color:id,name',
-            'variant.size:id,name'
+            'variant.size:id,name',
         ])->where(['user_id' => $user->id])->get();
 
         // Ẩn các appended attributes nặng của ProductModel để tránh lỗi 500
@@ -35,11 +34,11 @@ class CartController extends Controller
         $user = $request->user();
         $data = $request->validate([
             'variant_id' => 'required|integer',
-            'quantity' => 'sometimes|integer|min:1'
+            'quantity' => 'sometimes|integer|min:1',
         ]);
 
         $variant = Variant::find($data['variant_id'], ['*']);
-        if (!$variant) {
+        if (! $variant) {
             return response()->json(['message' => 'Variant not found'], 404);
         }
 
@@ -51,7 +50,7 @@ class CartController extends Controller
 
         if (isset($variant->stock) && $newQuantity > $variant->stock) {
             return response()->json([
-                'message' => 'Số lượng yêu cầu (' . $newQuantity . ') vượt quá tồn kho (Hiện có: ' . $variant->stock . ')'
+                'message' => 'Số lượng yêu cầu ('.$newQuantity.') vượt quá tồn kho (Hiện có: '.$variant->stock.')',
             ], 400);
         }
 
@@ -73,7 +72,7 @@ class CartController extends Controller
     {
         $user = $request->user();
         $data = $request->validate([
-            'quantity' => 'required|integer|min:1'
+            'quantity' => 'required|integer|min:1',
         ]);
 
         // Try to find cart by cart.id first, then fall back to variant_id
@@ -81,12 +80,14 @@ class CartController extends Controller
         if (! $cart) {
             $cart = Cart::query()->where(['variant_id' => $id, 'user_id' => $user->id])->first();
         }
-        if (!$cart) return response()->json(['message' => 'Not found'], 404);
+        if (! $cart) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
 
         $variant = Variant::find($cart->variant_id, ['*']);
         if ($variant && isset($variant->stock) && $data['quantity'] > $variant->stock) {
             return response()->json([
-                'message' => 'Số lượng yêu cầu (' . $data['quantity'] . ') vượt quá tồn kho (Hiện có: ' . $variant->stock . ')'
+                'message' => 'Số lượng yêu cầu ('.$data['quantity'].') vượt quá tồn kho (Hiện có: '.$variant->stock.')',
             ], 400);
         }
 
@@ -100,9 +101,12 @@ class CartController extends Controller
     {
         $user = $request->user();
         $cart = Cart::query()->where(['id' => $id, 'user_id' => $user->id])->first();
-        if (!$cart) return response()->json(['message' => 'Not found'], 404);
+        if (! $cart) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
 
         $cart->delete();
+
         return response()->json(['message' => 'Deleted']);
     }
 
@@ -110,6 +114,7 @@ class CartController extends Controller
     {
         $user = $request->user();
         Cart::query()->where(['user_id' => $user->id])->delete();
+
         return response()->json(['message' => 'Cart cleared']);
     }
 }

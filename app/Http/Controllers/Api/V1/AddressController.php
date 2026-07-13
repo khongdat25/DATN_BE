@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Address;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -15,10 +14,10 @@ class AddressController extends Controller
     public function index(Request $request)
     {
         $user = auth('api')->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Chưa đăng nhập!'
+                'message' => 'Chưa đăng nhập!',
             ], 401);
         }
 
@@ -30,7 +29,7 @@ class AddressController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $addresses
+            'data' => $addresses,
         ], 200);
     }
 
@@ -40,10 +39,10 @@ class AddressController extends Controller
     public function store(Request $request)
     {
         $user = auth('api')->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Chưa đăng nhập!'
+                'message' => 'Chưa đăng nhập!',
             ], 401);
         }
 
@@ -64,12 +63,12 @@ class AddressController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Dữ liệu không hợp lệ!',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         $hasNoAddress = $user->addresses()->count() === 0;
-        $isDefault = $hasNoAddress ? true : ((bool)$request->input('is_default', false) || $request->input('badge') === 'Mặc định');
+        $isDefault = $hasNoAddress ? true : ((bool) $request->input('is_default', false) || $request->input('badge') === 'Mặc định');
 
         // Nếu đánh dấu mặc định, gỡ mặc định các địa chỉ khác
         if ($isDefault) {
@@ -81,13 +80,13 @@ class AddressController extends Controller
             'phone' => $request->phone,
             'address' => $request->address,
             'badge' => $request->badge,
-            'is_default' => $isDefault
+            'is_default' => $isDefault,
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Thêm địa chỉ thành công!',
-            'data' => $address
+            'data' => $address,
         ], 201);
     }
 
@@ -97,18 +96,18 @@ class AddressController extends Controller
     public function update(Request $request, $id)
     {
         $user = auth('api')->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Chưa đăng nhập!'
+                'message' => 'Chưa đăng nhập!',
             ], 401);
         }
 
         $address = $user->addresses()->find($id);
-        if (!$address) {
+        if (! $address) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không tìm thấy địa chỉ!'
+                'message' => 'Không tìm thấy địa chỉ!',
             ], 404);
         }
 
@@ -129,11 +128,11 @@ class AddressController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Dữ liệu không hợp lệ!',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
-        $isDefault = (bool)$request->input('is_default', false) || $request->input('badge') === 'Mặc định';
+        $isDefault = (bool) $request->input('is_default', false) || $request->input('badge') === 'Mặc định';
 
         // Xử lý đổi trạng thái mặc định của địa chỉ này
         if ($isDefault) {
@@ -157,13 +156,13 @@ class AddressController extends Controller
             'phone' => $request->phone,
             'address' => $request->address,
             'badge' => $request->badge,
-            'is_default' => $isDefault
+            'is_default' => $isDefault,
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Cập nhật địa chỉ thành công!',
-            'data' => $address
+            'data' => $address,
         ], 200);
     }
 
@@ -173,18 +172,18 @@ class AddressController extends Controller
     public function destroy($id)
     {
         $user = auth('api')->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Chưa đăng nhập!'
+                'message' => 'Chưa đăng nhập!',
             ], 401);
         }
 
         $address = $user->addresses()->find($id);
-        if (!$address) {
+        if (! $address) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không tìm thấy địa chỉ!'
+                'message' => 'Không tìm thấy địa chỉ!',
             ], 404);
         }
 
@@ -201,7 +200,7 @@ class AddressController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Xóa địa chỉ thành công!'
+            'message' => 'Xóa địa chỉ thành công!',
         ], 200);
     }
 }

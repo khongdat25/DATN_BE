@@ -17,11 +17,11 @@ class Address extends Model
         'phone',
         'address',
         'badge',
-        'is_default'
+        'is_default',
     ];
 
     protected $casts = [
-        'is_default' => 'boolean'
+        'is_default' => 'boolean',
     ];
 
     public function user()

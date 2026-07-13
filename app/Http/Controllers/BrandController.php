@@ -58,6 +58,7 @@ class BrandController extends Controller
             'name'        => $request->name,
             'description'        => $request->description,
             'status'      => $request->status,
+            'is_featured' => $request->is_featured ?? 0,
         ]);
         return response()->json([
             'success' => true,
@@ -81,6 +82,7 @@ class BrandController extends Controller
             'name'        => $request->name,
             'status'      => $request->status,
             'description'        => $request->description,
+            'is_featured' => $request->is_featured ?? 0,
         ]);
         return response()->json([
             'success' => true,

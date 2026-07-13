@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use PayOS\PayOS;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Variant;
-use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use PayOS\PayOS;
 
 class CheckoutController extends Controller
 {
@@ -28,26 +27,33 @@ class CheckoutController extends Controller
             'shipping_fee' => 'sometimes|numeric|min:0',
             'variant_id' => 'nullable|integer',
             'quantity' => 'nullable|integer|min:1',
+            'cart_item_ids' => 'sometimes|nullable|array',
+            'cart_item_ids.*' => 'integer',
         ]);
 
         $isBuyNow = isset($data['variant_id']);
 
         if ($isBuyNow) {
             $variant = Variant::find($data['variant_id'], ['*']);
-            if (!$variant) {
+            if (! $variant) {
                 return response()->json(['message' => 'Variant not found'], 404);
             }
             $cartItems = collect([
-                (object)[
+                (object) [
                     'variant_id' => $variant->id,
                     'quantity' => $data['quantity'] ?? 1,
-                    'variant' => $variant
-                ]
+                    'variant' => $variant,
+                ],
             ]);
         } else {
-            $cartItems = Cart::query()->with('variant')->where(['user_id' => $user->id])->get();
+            $query = Cart::query()->with('variant')->where(['user_id' => $user->id]);
+            if (! empty($data['cart_item_ids'])) {
+                $query->whereIn('id', $data['cart_item_ids']);
+            }
+            $cartItems = $query->get();
             if ($cartItems->isEmpty()) {
-                \Illuminate\Support\Facades\Log::warning("Checkout failed: Cart is empty for user " . $user->id);
+                \Illuminate\Support\Facades\Log::warning('Checkout failed: Cart is empty for user '.$user->id);
+
                 return response()->json(['message' => 'Cart is empty'], 400);
             }
         }
@@ -65,14 +71,15 @@ class CheckoutController extends Controller
             $appliedVoucherId = null;
 
             // Apply voucher discount if any
-            if (!empty($data['voucher_id'])) {
+            if (! empty($data['voucher_id'])) {
                 $voucher = \App\Models\Voucher::where('id', '=', $data['voucher_id'], 'and')
                     ->lockForUpdate()
                     ->first();
 
-                if (!$voucher) {
+                if (! $voucher) {
                     DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher not found for user " . $user->id);
+                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher not found for user '.$user->id);
+
                     return response()->json(['message' => 'Mã giảm giá không tồn tại'], 400);
                 }
 
@@ -80,25 +87,29 @@ class CheckoutController extends Controller
 
                 if ($voucher->status !== 'active') {
                     DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher inactive for user " . $user->id);
+                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher inactive for user '.$user->id);
+
                     return response()->json(['message' => 'Mã giảm giá đã bị khóa hoặc không hoạt động'], 400);
                 }
 
                 if ($voucher->start_date && $now->startOfDay()->lt(\Carbon\Carbon::parse($voucher->start_date))) {
                     DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher not started for user " . $user->id);
+                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher not started for user '.$user->id);
+
                     return response()->json(['message' => 'Mã giảm giá chưa đến thời gian bắt đầu'], 400);
                 }
 
                 if ($voucher->end_date && $now->startOfDay()->gt(\Carbon\Carbon::parse($voucher->end_date))) {
                     DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher expired for user " . $user->id);
+                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher expired for user '.$user->id);
+
                     return response()->json(['message' => 'Mã giảm giá đã hết hạn hoặc bị khóa'], 400);
                 }
 
                 if ($voucher->used_count >= $voucher->total_usage) {
                     DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher fully used for user " . $user->id);
+                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher fully used for user '.$user->id);
+
                     return response()->json(['message' => 'Mã giảm giá đã hết lượt sử dụng'], 400);
                 }
 
@@ -110,13 +121,15 @@ class CheckoutController extends Controller
 
                 if ($alreadyUsed) {
                     DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Voucher already used by user " . $user->id);
+                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher already used by user '.$user->id);
+
                     return response()->json(['message' => 'Bạn đã sử dụng mã giảm giá này rồi'], 400);
                 }
 
                 if ($total < $voucher->min_order) {
                     DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning("Checkout failed: Order total less than min_order for user " . $user->id);
+                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Order total less than min_order for user '.$user->id);
+
                     return response()->json(['message' => 'Đơn hàng chưa đạt giá trị tối thiểu để sử dụng mã này'], 400);
                 }
 
@@ -165,8 +178,9 @@ class CheckoutController extends Controller
                     ->lockForUpdate()
                     ->first();
 
-                if (!$variant) {
+                if (! $variant) {
                     DB::rollBack();
+
                     return response()->json(['message' => 'Sản phẩm hoặc biến thể không tồn tại'], 404);
                 }
 
@@ -175,8 +189,9 @@ class CheckoutController extends Controller
                     $productName = $variant->product->name ?? 'Sản phẩm';
                     $sizeName = $variant->size->name ?? $variant->size_id;
                     $colorName = $variant->color->name ?? $variant->color_id;
+
                     return response()->json([
-                        'message' => "Sản phẩm {$productName} (Size {$sizeName} - Màu {$colorName}) không đủ số lượng trong kho (Hiện còn {$variant->stock})"
+                        'message' => "Sản phẩm {$productName} (Size {$sizeName} - Màu {$colorName}) không đủ số lượng trong kho (Hiện còn {$variant->stock})",
                     ], 400);
                 }
 
@@ -217,15 +232,15 @@ class CheckoutController extends Controller
 
                     $paymentData = [
                         'orderCode' => $order->id,
-                        'amount' => (int)$total,
-                        'description' => 'SGS-' . $order->id,
-                        'cancelUrl' => $baseUrl . '/checkout?status=cancelled&order_id=' . $order->id,
-                        'returnUrl' => $baseUrl . '/profile?tab=orders&status=success&order_id=' . $order->id,
+                        'amount' => (int) $total,
+                        'description' => 'SGS-'.$order->id,
+                        'cancelUrl' => $baseUrl.'/checkout?status=cancelled&order_id='.$order->id,
+                        'returnUrl' => $baseUrl.'/profile?tab=orders&status=success&order_id='.$order->id,
                     ];
 
                     $payOSResponse = $payOS->createPaymentLink($paymentData);
                 } catch (\Exception $payOSError) {
-                    \Illuminate\Support\Facades\Log::warning('PayOS Link Creation Failed: ' . $payOSError->getMessage());
+                    \Illuminate\Support\Facades\Log::warning('PayOS Link Creation Failed: '.$payOSError->getMessage());
                     // Fallback to active order status
                     $order->status = 'new';
                     $order->save();
@@ -237,8 +252,12 @@ class CheckoutController extends Controller
             }
 
             // clear cart only if this is NOT a buy-now checkout
-            if (!$isBuyNow) {
-                Cart::query()->where(['user_id' => $user->id])->delete();
+            if (! $isBuyNow) {
+                $deleteQuery = Cart::query()->where(['user_id' => $user->id]);
+                if (! empty($data['cart_item_ids'])) {
+                    $deleteQuery->whereIn('id', $data['cart_item_ids']);
+                }
+                $deleteQuery->delete();
             }
 
             DB::commit();
@@ -252,6 +271,7 @@ class CheckoutController extends Controller
             return response()->json($responsePayload, 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json(['message' => 'Checkout failed', 'error' => $e->getMessage()], 500);
         }
     }
@@ -265,7 +285,7 @@ class CheckoutController extends Controller
         $apiKey = env('PAYOS_API_KEY');
         $checksumKey = env('PAYOS_CHECKSUM_KEY');
 
-        if (!$clientId || !$apiKey || !$checksumKey) {
+        if (! $clientId || ! $apiKey || ! $checksumKey) {
             return response()->json(['success' => false, 'message' => 'PayOS credentials not configured'], 500);
         }
 
@@ -286,12 +306,12 @@ class CheckoutController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Webhook processed successfully'
+                'message' => 'Webhook processed successfully',
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Webhook processing failed: ' . $e->getMessage()
+                'message' => 'Webhook processing failed: '.$e->getMessage(),
             ], 400);
         }
     }
