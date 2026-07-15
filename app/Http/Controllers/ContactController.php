@@ -121,6 +121,7 @@ class ContactController extends Controller
 
         $validator = Validator::make($request->all(), [
             'status' => 'required|string|in:pending,processed',
+            'reply_content' => 'nullable|string',
         ], [
             'status.required' => 'Trạng thái xử lý là bắt buộc.',
             'status.in' => 'Trạng thái không hợp lệ (chỉ chấp nhận pending hoặc processed).',
@@ -132,6 +133,16 @@ class ContactController extends Controller
                 'message' => 'Dữ liệu không hợp lệ!',
                 'errors' => $validator->errors(),
             ], 422);
+        }
+
+        if ($request->filled('reply_content')) {
+            try {
+                \Illuminate\Support\Facades\Mail::to($contact->email)->send(
+                    new \App\Mail\ContactReplyMail($contact->name, $contact->message, $request->input('reply_content'))
+                );
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('Contact reply email failed: ' . $e->getMessage());
+            }
         }
 
         $contact->update([

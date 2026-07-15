@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\DashboardController;
@@ -163,4 +164,11 @@ Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
 
     // Quản lý Vouchers (Admin)
     Route::apiResource('/vouchers', VoucherController::class);
+
+    // Quản lý Người dùng (Admin)
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::put('/users/{id}/status', [UserController::class, 'updateStatus']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
 });
