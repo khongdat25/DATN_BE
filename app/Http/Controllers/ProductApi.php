@@ -86,7 +86,7 @@ class ProductApi extends Controller
        $flashSales = Flashsale::query()->with(['items:id,flash_sale_id,sold,quantity_limit,discount_value,product_variant_id',
                                         'items.productVariant:id,product_id,size_id,color_id,image,stock,price',
                                         'items.productVariant.product:id,name,slug,category_id,brand_id'])
-                                                ->where(['status' => 1])
+                                                ->where(['status' => 2])
                                                 ->where('start_time', '<=', $now)
                                                 ->where('end_time', '>=', $now)
                                                 ->take(5)

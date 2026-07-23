@@ -16,7 +16,7 @@ class flashsale extends Controller
         ->withCount(['items as total']);
 
         if ($request->filled('status')){
-            $data->where('status', $request->status);
+            $data->where('status', $request->status); 
             }
               $sale = $data
         ->with([
@@ -179,7 +179,7 @@ class flashsale extends Controller
     $flash = flash::findOrFail($id);
     $flash->update(['status' => $flash->status == 1 ? 2 : 1]);
     
-    return response()->json(['message' => 'Cập nhật trạng thái thành công!']);
+    return response()->json(['message' => $flash . 'đã cập nhật thành công']);
     }
 
    function endcamp($id){
