@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\flashsale;
+use App\Http\Controllers\BannerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,6 +54,10 @@ Route::get('/search', [ProductApi::class, 'Search']);
 // Tin tức (Blogs)
 Route::get('/blogs', [BlogController::class, 'index']);
 Route::get('/blogs/{slugOrId}', [BlogController::class, 'show']);
+
+// Banners (Public)
+Route::get('/banners', [BannerController::class, 'index']);
+Route::get('/banners/{id}', [BannerController::class, 'show']);
 
 // Liên hệ (Contacts)
 Route::post('/contacts', [ContactController::class, 'store']);
@@ -290,6 +295,13 @@ Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
 
     // Quản lý Vouchers (Admin)
     Route::apiResource('/vouchers', VoucherController::class);
+
+    // Quản lý Banners (Admin)
+    Route::get('/banners', [BannerController::class, 'adminIndex']);
+    Route::post('/banners', [BannerController::class, 'store']);
+    Route::post('/banners/{id}', [BannerController::class, 'update']);
+    Route::patch('/banners/{id}/toggle', [BannerController::class, 'toggleActive']);
+    Route::delete('/banners/{id}', [BannerController::class, 'destroy']);
 });
 
 
