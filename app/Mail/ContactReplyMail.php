@@ -8,25 +8,22 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class ResetPasswordMail extends Mailable
+class ContactReplyMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public string $token;
-
-    public string $email;
-
-    public string $resetUrl;
+    public string $customerName;
+    public string $originalMessage;
+    public string $replyContent;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(string $token, string $email)
+    public function __construct(string $customerName, string $originalMessage, string $replyContent)
     {
-        $this->token = $token;
-        $this->email = $email;
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
-        $this->resetUrl = rtrim($frontendUrl, '/').'/reset-password?token='.$token.'&email='.urlencode($email);
+        $this->customerName = $customerName;
+        $this->originalMessage = $originalMessage;
+        $this->replyContent = $replyContent;
     }
 
     /**
@@ -35,7 +32,7 @@ class ResetPasswordMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Đặt lại mật khẩu tài khoản SaigonShoes',
+            subject: 'Phản hồi liên hệ từ SaigonShoes',
         );
     }
 
@@ -45,14 +42,12 @@ class ResetPasswordMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.reset_password',
+            view: 'emails.contact_reply',
         );
     }
 
     /**
      * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
      */
     public function attachments(): array
     {

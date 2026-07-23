@@ -14,7 +14,7 @@ class OrderItem extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'order_id', 'variant_id', 'quantity', 'price'
+        'order_id', 'variant_id', 'quantity', 'price',
     ];
 
     public function variant()

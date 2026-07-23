@@ -6,14 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\ProductModel;
-
-use App\Models\Variant;
-use App\Models\Color;
 class Size extends Model
 {
-    use HasFactory;
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
     protected $table = 'sizes';
     public $timestamps = false; 
     protected $fillable = ['name','description','status'];

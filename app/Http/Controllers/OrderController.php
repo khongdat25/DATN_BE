@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Variant;
-use App\Models\Cart;
-use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
@@ -26,14 +25,14 @@ class OrderController extends Controller
             },
             'items.variant.size:id,name',
             'items.variant.color:id,name',
-            'histories.user:id,name'
+            'histories.user:id,name',
         ])
-        ->orderBy('created_at', 'desc')
-        ->get();
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return response()->json([
             'success' => true,
-            'data' => $orders
+            'data' => $orders,
         ], 200);
     }
 
@@ -44,37 +43,38 @@ class OrderController extends Controller
     {
         $request->validate([
             'status' => 'required|string|in:new,pending,shipping,delivered,cancelled',
-            'payment_status' => 'sometimes|string|in:pending,paid,refunded'
+            'payment_status' => 'sometimes|string|in:pending,paid,refunded',
         ]);
 
         $order = Order::findOrFail($id);
-        
+
         $oldStatus = $order->status;
 
         // Tránh cho phép thay đổi ngược (lùi trạng thái) hoặc thay đổi khi đã ở trạng thái kết thúc
         if ($oldStatus !== $request->status) {
             $allowedTransitions = [
-                'new'       => ['pending', 'shipping', 'delivered', 'cancelled'],
-                'pending'   => ['shipping', 'delivered', 'cancelled'],
-                'shipping'  => ['delivered', 'cancelled'],
+                'new' => ['pending', 'shipping', 'delivered', 'cancelled'],
+                'pending' => ['shipping', 'delivered', 'cancelled'],
+                'shipping' => ['delivered', 'cancelled'],
                 'delivered' => [], // Trạng thái kết thúc
                 'cancelled' => [], // Trạng thái kết thúc
             ];
 
             $statusLabels = [
-                'new'       => 'Mới',
-                'pending'   => 'Chờ xử lý',
-                'shipping'  => 'Đang giao hàng',
+                'new' => 'Mới',
+                'pending' => 'Chờ xử lý',
+                'shipping' => 'Đang giao hàng',
                 'delivered' => 'Đã giao hàng',
                 'cancelled' => 'Đã hủy',
             ];
 
-            if (!isset($allowedTransitions[$oldStatus]) || !in_array($request->status, $allowedTransitions[$oldStatus])) {
+            if (! isset($allowedTransitions[$oldStatus]) || ! in_array($request->status, $allowedTransitions[$oldStatus])) {
                 $oldLabel = $statusLabels[$oldStatus] ?? $oldStatus;
                 $newLabel = $statusLabels[$request->status] ?? $request->status;
+
                 return response()->json([
                     'success' => false,
-                    'message' => "Không thể chuyển đổi trạng thái đơn hàng từ '{$oldLabel}' sang '{$newLabel}'"
+                    'message' => "Không thể chuyển đổi trạng thái đơn hàng từ '{$oldLabel}' sang '{$newLabel}'",
                 ], 400);
             }
         }
@@ -110,17 +110,19 @@ class OrderController extends Controller
             }
 
             DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Cập nhật trạng thái đơn hàng thành công',
-                'data' => $order
+                'data' => $order,
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Cập nhật trạng thái đơn hàng thất bại',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -147,16 +149,18 @@ class OrderController extends Controller
             $order->delete();
 
             DB::commit();
+
             return response()->json([
                 'success' => true,
-                'message' => 'Xóa đơn hàng thành công'
+                'message' => 'Xóa đơn hàng thành công',
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Xóa đơn hàng thất bại',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -175,15 +179,15 @@ class OrderController extends Controller
                 $query->withTrashed()->select(['id', 'name', 'images']);
             },
             'items.variant.size:id,name',
-            'items.variant.color:id,name'
+            'items.variant.color:id,name',
         ])
-        ->where('user_id', $user->id)
-        ->orderBy('created_at', 'desc')
-        ->get();
+            ->where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return response()->json([
             'success' => true,
-            'data' => $orders
+            'data' => $orders,
         ], 200);
     }
 
@@ -196,10 +200,10 @@ class OrderController extends Controller
         $order = Order::query()->where('id', '=', $id, 'and')->where('user_id', '=', $user->id, 'and')->firstOrFail();
 
         // Chỉ cho phép hủy khi đơn ở trạng thái mới hoặc chờ xử lý
-        if (!in_array($order->status, ['new', 'pending'])) {
+        if (! in_array($order->status, ['new', 'pending'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không thể hủy đơn hàng ở trạng thái này'
+                'message' => 'Không thể hủy đơn hàng ở trạng thái này',
             ], 400);
         }
 
@@ -227,17 +231,19 @@ class OrderController extends Controller
             }
 
             DB::commit();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Hủy đơn hàng thành công',
-                'data' => $order
+                'data' => $order,
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Hủy đơn hàng thất bại',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -256,15 +262,15 @@ class OrderController extends Controller
                 $query->withTrashed()->select(['id', 'name', 'images']);
             },
             'items.variant.size:id,name',
-            'items.variant.color:id,name'
+            'items.variant.color:id,name',
         ])
-        ->where('id', $id)
-        ->where('user_id', $user->id)
-        ->firstOrFail();
+            ->where('id', $id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
 
         return response()->json([
             'success' => true,
-            'data' => $order
+            'data' => $order,
         ], 200);
     }
 
@@ -280,7 +286,7 @@ class OrderController extends Controller
         if ($order->status !== 'pending') {
             return response()->json([
                 'success' => false,
-                'message' => 'Không thể hủy đơn hàng đã duyệt hoặc đã thanh toán'
+                'message' => 'Không thể hủy đơn hàng đã duyệt hoặc đã thanh toán',
             ], 400);
         }
 
@@ -295,7 +301,7 @@ class OrderController extends Controller
             }
 
             $orderItems = OrderItem::query()->where('order_id', '=', $order->id, 'and')->get();
-            
+
             // 1. Hoàn trả lại số lượng tồn kho (stock) cho các variant
             foreach ($orderItems as $item) {
                 $variant = Variant::find($item->variant_id, ['*']);
@@ -308,8 +314,8 @@ class OrderController extends Controller
             // 2. Khôi phục lại giỏ hàng cho user
             foreach ($orderItems as $item) {
                 $existingCart = Cart::where('user_id', '=', $user->id, 'and')
-                                    ->where('variant_id', '=', $item->variant_id, 'and')
-                                    ->first();
+                    ->where('variant_id', '=', $item->variant_id, 'and')
+                    ->first();
                 if ($existingCart) {
                     $existingCart->quantity += $item->quantity;
                     $existingCart->save();
@@ -317,7 +323,7 @@ class OrderController extends Controller
                     Cart::create([
                         'user_id' => $user->id,
                         'variant_id' => $item->variant_id,
-                        'quantity' => $item->quantity
+                        'quantity' => $item->quantity,
                     ]);
                 }
             }
@@ -327,16 +333,18 @@ class OrderController extends Controller
             $order->delete();
 
             DB::commit();
+
             return response()->json([
                 'success' => true,
-                'message' => 'Đã hủy bỏ đơn hàng và khôi phục giỏ hàng thành công'
+                'message' => 'Đã hủy bỏ đơn hàng và khôi phục giỏ hàng thành công',
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Hủy đơn hàng thất bại',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

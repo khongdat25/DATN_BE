@@ -23,7 +23,7 @@ class CheckAdmin
 
         return response()->json([
             'success' => false,
-            'message' => 'Bạn không có quyền truy cập chức năng này.'
+            'message' => 'Bạn không có quyền truy cập chức năng này.',
         ], 403);
     }
 }

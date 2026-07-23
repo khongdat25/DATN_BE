@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Voucher;
-use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class VoucherController extends Controller
 {
@@ -13,6 +13,7 @@ class VoucherController extends Controller
     public function index()
     {
         $vouchers = Voucher::orderBy('created_at', 'desc')->get();
+
         return response()->json(['success' => true, 'data' => $vouchers], 200);
     }
 
@@ -32,20 +33,26 @@ class VoucherController extends Controller
         ]);
 
         $voucher = Voucher::create($validated);
+
         return response()->json(['success' => true, 'data' => $voucher], 201);
     }
 
     public function show(int $id)
     {
         $voucher = Voucher::find($id, ['*']);
-        if (!$voucher) return response()->json(['success' => false, 'message' => 'Voucher not found'], 404);
+        if (! $voucher) {
+            return response()->json(['success' => false, 'message' => 'Voucher not found'], 404);
+        }
+
         return response()->json(['success' => true, 'data' => $voucher], 200);
     }
 
     public function update(Request $request, int $id)
     {
         $voucher = Voucher::find($id, ['*']);
-        if (!$voucher) return response()->json(['success' => false, 'message' => 'Voucher not found'], 404);
+        if (! $voucher) {
+            return response()->json(['success' => false, 'message' => 'Voucher not found'], 404);
+        }
 
         $validated = $request->validate([
             'code' => 'sometimes|string|unique:vouchers,code,'.$id,
@@ -61,14 +68,18 @@ class VoucherController extends Controller
         ]);
 
         $voucher->update($validated);
+
         return response()->json(['success' => true, 'data' => $voucher], 200);
     }
 
     public function destroy(int $id)
     {
         $voucher = Voucher::find($id, ['*']);
-        if (!$voucher) return response()->json(['success' => false, 'message' => 'Voucher not found'], 404);
+        if (! $voucher) {
+            return response()->json(['success' => false, 'message' => 'Voucher not found'], 404);
+        }
         $voucher->delete();
+
         return response()->json(['success' => true, 'message' => 'Voucher deleted'], 200);
     }
 
@@ -92,7 +103,7 @@ class VoucherController extends Controller
                 ->toArray();
 
             $vouchers = $vouchers->filter(function ($voucher) use ($usedVoucherIds) {
-                return !in_array($voucher->id, $usedVoucherIds);
+                return ! in_array($voucher->id, $usedVoucherIds);
             })->values();
         }
 
@@ -104,12 +115,12 @@ class VoucherController extends Controller
         $request->validate([
             'code' => 'required|string',
             'subtotal' => 'required|numeric',
-            'shipping_fee' => 'sometimes|numeric|min:0'
+            'shipping_fee' => 'sometimes|numeric|min:0',
         ]);
 
         $voucher = Voucher::where('code', '=', $request->code, 'and')->first();
 
-        if (!$voucher) {
+        if (! $voucher) {
             return response()->json(['success' => false, 'message' => 'Mã giảm giá không tồn tại'], 404);
         }
 
@@ -161,10 +172,10 @@ class VoucherController extends Controller
         }
 
         return response()->json([
-            'success' => true, 
-            'data' => $voucher, 
+            'success' => true,
+            'data' => $voucher,
             'discount' => $discount,
-            'message' => 'Áp dụng mã thành công'
+            'message' => 'Áp dụng mã thành công',
         ], 200);
     }
 }

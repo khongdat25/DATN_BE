@@ -2,109 +2,114 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
-use App\Models\ProductModel;
-use App\Models\Variant;
 use App\Models\Category;
-use App\Models\Brand;
-use Carbon\Carbon;
+use Illuminate\Http\Request;
+
 class CategoryApi extends Controller
 {
-    function admin_category(Request $request){
-         $category = Category::query()
-        ->withCount(['variants as total']);
+    public function admin_category(Request $request)
+    {
+        $category = Category::query()
+            ->withCount(['variants as total']);
 
-        if($request->filled('q')) {
-                $category->where('name', 'like', '%' . $request->q . '%');
+        if ($request->filled('q')) {
+            $category->where('name', 'like', '%'.$request->q.'%');
         }
-         if ($request->filled('status')) {
-                $category->where('status', $request->status);
-            }
+        if ($request->filled('status')) {
+            $category->where('status', $request->status);
+        }
         if ($request->filled('sort')) {
-                if ($request->sort == 'byslug') {
-                    $category->orderBy('slug', 'asc');
-                }
-                 if ($request->sort == 'bynumber') {
-                    $category->orderBy('total', 'asc');
-                }
-                if ($request->sort == 'byname') {
-                    $category->orderBy('name', 'asc');
-                }
+            if ($request->sort == 'byslug') {
+                $category->orderBy('slug', 'asc');
             }
+            if ($request->sort == 'bynumber') {
+                $category->orderBy('total', 'asc');
+            }
+            if ($request->sort == 'byname') {
+                $category->orderBy('name', 'asc');
+            }
+        }
+
         return response()->json(
-        [
-            'success' => true,
-            'message' => 'hiển bị và lọc category',
-            'data' => $category->get(),
-            
-        ],200);
+            [
+                'success' => true,
+                'message' => 'hiển bị và lọc category',
+                'data' => $category->get(),
+
+            ], 200);
     }
-    function togglecate($id){
-          $category = Category::findOrFail($id);
-           $category->update(['status' => !$category->status]);
+
+    public function togglecate(string|int $id)
+    {
+        $category = Category::findOrFail($id);
+        $category->update(['status' => ! $category->status]);
+
         return response()->json(['message' => 'Cập nhật trạng thái thành công!']);
     }
 
-    function add(Request $request){
+    public function add(Request $request)
+    {
         $request->validate([
-        'name'        => 'required|string',
-        'slug'    => 'required|string',
-        'description' => 'nullable|string',
+            'name'        => 'required|string|unique:categories,name',
+            'slug'        => 'required|string|unique:categories,slug',
+            'description' => 'nullable|string',
         ], [   
-        'name.unique' => 'Tên danh mục này đã tồn tại.',
-        'slug.unique' => 'Slug danh mục này đã tồn tại.',
+            'name.unique' => 'Tên danh mục này đã tồn tại.',
+            'slug.unique' => 'Slug danh mục này đã tồn tại.',
         ]);
-     $category = Category::create([
-            'name'        => $request->name,
-            'slug'        => $request->slug,
-            'description' =>$request->description,
+        $category = Category::create([
+            'name' => $request->name,
+            'slug' => $request->slug,
+            'description' => $request->description,
         ]);
+
         return response()->json([
             'success' => true,
             'message' => 'success',
-            'data'    => $category,
-        ], 201);    
+            'data' => $category,
+        ], 201);
     }
 
-    function edit(Request $request, $id){
+    public function edit(Request $request, string|int $id)
+    {
         $request->validate([
-        'name'        => 'required|string|unique:categories,name,' . $id,
-        'slug'        => 'required|string|unique:categories,slug,' . $id,
-        'description' => 'nullable|string',
-        'status'        =>  'required'
-        ],[
-        'name.unique' => 'Tên danh mục này đã tồn tại ở một danh mục khác.',
-        'slug.unique' => 'Slug danh mục này đã tồn tại ở một danh mục khác.',
+            'name'        => 'required|string|unique:categories,name,' . $id,
+            'slug'        => 'required|string|unique:categories,slug,' . $id,
+            'description' => 'nullable|string',
+            'status'      => 'required'
+        ], [
+            'name.unique' => 'Tên danh mục này đã tồn tại ở một danh mục khác.',
+            'slug.unique' => 'Slug danh mục này đã tồn tại ở một danh mục khác.',
         ]);
         $category = Category::findOrFail($id);
 
         $category->update([
-            'name'        => $request->name,
-            'slug'        => $request->slug,
-            'description' =>$request->description,
-            'status'      =>$request->status  
+            'name' => $request->name,
+            'slug' => $request->slug,
+            'description' => $request->description,
+            'status' => $request->status,
         ]);
+
         return response()->json([
             'success' => true,
             'message' => 'success',
-            'data'    => $category,
-        ], 200);    
+            'data' => $category,
+        ], 200);
     }
 
-     function destroy(Category $category){
+    public function destroy(Category $category)
+    {
         if ($category->products()->exists()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Danh mục này hiện đang chứa sản phẩm.'
-        ], 400); 
+            return response()->json([
+                'success' => false,
+                'message' => 'Danh mục này hiện đang chứa sản phẩm.',
+            ], 400);
         }
-        $category->delete();
-         return response()->json([
+        Category::destroy($category->id);
+
+        return response()->json([
             'success' => true,
             'message' => 'deleted',
-        ],200);
+        ], 200);
     }
-
 }
