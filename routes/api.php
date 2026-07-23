@@ -33,34 +33,7 @@ use Illuminate\Support\Facades\Route;
 | routes are loaded by the RouteServiceProvider and all of them will
 | be assigned to the "api" middleware group. Make something great!
 |
-*/
-Route::get('/flash-sale', [flashsale::class, 'show']);
-Route::delete('/flash-sale/delete/{id}', [flashsale::class, 'destroy']);
-Route::post('/flash-sale/add', [flashsale::class, 'add']);
-Route::put('/flash-sale/edit/{id}', [flashsale::class, 'edit']);
-Route::patch('/flash-sale/toggle-cate/{id}', [flashsale::class, 'togglecate']);
-Route::patch('/flash-sale/end-camp/{id}', [flashsale::class, 'endcamp']);
-/*crud size, color,  */
-Route:: get('/size', [SizeController::class, 'index']);
-Route::post('/size/add', [SizeController::class, 'add']);
-Route::put('/size/edit/{id}', [SizeController::class, 'edit']);
-Route::patch('/size/toggle-cate/{id}', [SizeController::class, 'togglecate']);
-Route::delete('/size/delete/{size}', [SizeController::class, 'destroy']);
-
-/*crud color */
-Route:: get('/color', [ColorController::class, 'index']);
-Route::post('/color/add', [ColorController::class, 'add']);
-Route::put('/color/edit/{id}', [ColorController::class, 'edit']);
-Route::patch('/color/toggle-cate/{id}', [ColorController::class, 'togglecate']);
-Route::delete('/color/delete/{color}', [ColorController::class, 'destroy']);
-
-//crud brand
-Route:: get('/brand', [BrandController::class, 'index']);
-Route::post('/brand/add', [BrandController::class, 'add']);
-Route::put('/brand/edit/{id}', [BrandController::class, 'edit']);
-Route::patch('/brand/toggle-cate/{id}', [BrandController::class, 'togglecate']);
-Route::patch('/brand/toggle-feature/{id}', [BrandController::class, 'togglefeature']);
-Route::delete('/brand/delete/{brand}', [BrandController::class, 'destroy']);
+*/ /*crud flashsale cần sửa */
 
 // lấy tên brand + category
 Route::get('/getbrands', [ProductApi::class, 'getBrands']);
@@ -119,26 +92,14 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/vouchers/available', [VoucherController::class, 'getAvailableVouchers']);
     Route::post('/vouchers/apply', [VoucherController::class, 'applyVoucher']);
 
-    // CRUD product
-    Route::get('adminproduct', [ProductApi::class, 'admin_product']);
-    Route::post('product_add', [ProductApi::class, 'product_add']);
-    Route::post('product_edit/{id}', [ProductApi::class, 'product_edit']);
-    Route::post('upload', [ProductApi::class, 'uploadImage']);
-    Route::delete('variant/{v}', [ProductApi::class, 'variant_delete']);
-    Route::delete('product/{id}', [ProductApi::class, 'product_delete']);
-
-    // CRUD danh mục
-    Route::get('admincategory', [CategoryApi::class, 'admin_category']);
-    Route::post('category_add', [CategoryApi::class, 'add']);
-    Route::post('category_edit/{id}', [CategoryApi::class, 'edit']);
-    Route::patch('toggle/{id}', [CategoryApi::class, 'togglecate']);
-    Route::delete('category/{category}', [CategoryApi::class, 'destroy']);
 
     // Đơn hàng (Orders) cho User
     Route::get('/user/orders', [OrderController::class, 'userIndex']);
     Route::get('/user/orders/{id}', [OrderController::class, 'userShow']);
     Route::delete('/user/orders/{id}', [OrderController::class, 'userDestroy']);
     Route::post('/user/orders/{id}/cancel', [OrderController::class, 'userCancel']);
+
+    
 
 });
 
@@ -165,10 +126,32 @@ Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
     // Quản lý Vouchers (Admin)
     Route::apiResource('/vouchers', VoucherController::class);
 
-    // Quản lý Người dùng (Admin)
-    Route::get('/users', [UserController::class, 'index']);
-    Route::post('/users', [UserController::class, 'store']);
-    Route::put('/users/{id}', [UserController::class, 'update']);
-    Route::put('/users/{id}/status', [UserController::class, 'updateStatus']);
-    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    Route::get('/flash-sale', [flashsale::class, 'show']); /*lọc status 1 2 3 với  1 = sắp diễn ra , 2 = đang chạy,  3 = đã kết thúc*/
+    Route::delete('/flash-sale/delete/{id}', [flashsale::class, 'destroy']);
+    Route::post('/flash-sale/add', [flashsale::class, 'add']);
+    Route::put('/flash-sale/edit/{id}', [flashsale::class, 'edit']);
+    Route::patch('/flash-sale/toggle-cate/{id}', [flashsale::class, 'togglecate']);
+    Route::patch('/flash-sale/end-camp/{id}', [flashsale::class, 'endcamp']);
+    /*crud size, color,  */
+    Route:: get('/size', [SizeController::class, 'index']);
+    Route::post('/size/add', [SizeController::class, 'add']);
+    Route::put('/size/edit/{id}', [SizeController::class, 'edit']);
+    Route::patch('/size/toggle-cate/{id}', [SizeController::class, 'togglecate']);
+    Route::delete('/size/delete/{size}', [SizeController::class, 'destroy']);
+
+    /*crud color */
+    Route:: get('/color', [ColorController::class, 'index']);
+    Route::post('/color/add', [ColorController::class, 'add']);
+    Route::put('/color/edit/{id}', [ColorController::class, 'edit']);
+    Route::patch('/color/toggle-cate/{id}', [ColorController::class, 'togglecate']);
+    Route::delete('/color/delete/{color}', [ColorController::class, 'destroy']);
+
+    //crud brand
+    Route:: get('/brand', [BrandController::class, 'index']);
+    Route::post('/brand/add', [BrandController::class, 'add']);
+    Route::put('/brand/edit/{id}', [BrandController::class, 'edit']);
+    Route::patch('/brand/toggle-cate/{id}', [BrandController::class, 'togglecate']);
+    Route::delete('/brand/delete/{brand}', [BrandController::class, 'destroy']);
 });
+
+
