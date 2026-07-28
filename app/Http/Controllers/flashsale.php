@@ -63,109 +63,111 @@ class flashsale extends Controller
         ], 200);
     }
 
-   function add(Request $request){
-       if ($request->has('golden_hour')) {
-        $times = explode(' - ', $request->golden_hour);
-        $request->merge([
-            'start_hour' => $times[0] ?? null,
-            'end_hour'   => $times[1] ?? null,
+    function add(Request $request){
+        $request->validate([
+            'name'            => 'required|string|max:255',
+            'start_time'      => 'nullable|string',
+            'end_time'        => 'nullable|string',
+            'discount_value'  => 'required|numeric|min:0|max:100',
+            'quantity_limit'  => 'required|integer|min:1',
+            'items'           => 'nullable|array',
+            'product_ids'     => 'nullable|array',
         ]);
-    }
-    $request->validate([
-        'name'            => 'required|string|max:255',
-        'date'            => 'required|date_format:Y-m-d', 
-        'start_hour'      => 'required|date_format:H:i',  
-        'end_hour'        => 'required|date_format:H:i',    
-        'discount_value'  => 'required|numeric|min:0|max:100',
-        'quantity_limit'  => 'required|integer|min:1',
-        'items'           => 'nullable|array',
-        'product_ids'     => 'nullable|array',
-    ]);
-    DB::beginTransaction();
+        DB::beginTransaction();
 
-    $startedTime = Carbon::createFromFormat('Y-m-d H:i', $request->date.' '.$request->start_hour);
-    $endTime = Carbon::createFromFormat('Y-m-d H:i', $request->date.' '.$request->end_hour);
-
-    try {
-        $create = flash::create([
-            'name'       => $request->name,
-            'start_time' => $startedTime,
-            'end_time'   => $endTime,
-            'status'     => 1,
-        ]);
-
-        if ($request->filled('items') && is_array($request->items)) {
-            foreach ($request->items as $item) {
-                Flashsaleitem::create([
-                    'flash_sale_id'  => $create->id,
-                    'product_id'     => $item['product_id'],
-                    'variant_id'     => $item['variant_id'] ?? null,
-                    'discount_value' => $request->discount_value,
-                    'quantity_limit' => $request->quantity_limit,
-                ]);
-            }
-        } elseif ($request->filled('product_ids') && is_array($request->product_ids)) {
-            foreach ($request->product_ids as $pId) {
-                Flashsaleitem::create([
-                    'flash_sale_id'  => $create->id,
-                    'product_id'     => $pId,
-                    'variant_id'     => null,
-                    'discount_value' => $request->discount_value,
-                    'quantity_limit' => $request->quantity_limit,
-                ]);
-            }
+        if ($request->filled('start_time') && $request->filled('end_time')) {
+            $startedTime = Carbon::parse($request->start_time);
+            $endTime     = Carbon::parse($request->end_time);
+        } elseif ($request->has('golden_hour') && $request->filled('date')) {
+            $times = explode(' - ', $request->golden_hour);
+            $startedTime = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . ($times[0] ?? '00:00'));
+            $endTime     = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . ($times[1] ?? '23:59'));
+        } else {
+            $startedTime = Carbon::parse(($request->date ?? date('Y-m-d')) . ' ' . ($request->start_hour ?? '00:00'));
+            $endTime     = Carbon::parse(($request->date ?? date('Y-m-d')) . ' ' . ($request->end_hour ?? '23:59'));
         }
 
-        DB::commit();
+        try {
+            $create = flash::create([
+                'name'       => $request->name,
+                'start_time' => $startedTime,
+                'end_time'   => $endTime,
+                'status'     => 1,
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'success',
-            'data' => $create,
-        ], 201);
+            if ($request->filled('items') && is_array($request->items)) {
+                foreach ($request->items as $item) {
+                    Flashsaleitem::create([
+                        'flash_sale_id'  => $create->id,
+                        'product_id'     => $item['product_id'],
+                        'variant_id'     => $item['variant_id'] ?? null,
+                        'discount_value' => $request->discount_value,
+                        'quantity_limit' => $request->quantity_limit,
+                    ]);
+                }
+            } elseif ($request->filled('product_ids') && is_array($request->product_ids)) {
+                foreach ($request->product_ids as $pId) {
+                    Flashsaleitem::create([
+                        'flash_sale_id'  => $create->id,
+                        'product_id'     => $pId,
+                        'variant_id'     => null,
+                        'discount_value' => $request->discount_value,
+                        'quantity_limit' => $request->quantity_limit,
+                    ]);
+                }
+            }
 
-    } catch (\Exception $e) {
-        DB::rollBack();
+            DB::commit();
 
-        return response()->json([
-            'success' => false,
-            'message' => 'failed :(',
-            'error' => $e->getMessage(),
-        ], 500);
+            return response()->json([
+                'success' => true,
+                'message' => 'success',
+                'data' => $create,
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'failed :(',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
-}
 
     /**
      * Cập nhật thông tin chiến dịch flashsale.
      */
     public function edit(Request $request, int $id)
     {
-        if ($request->has('golden_hour')) {
-            $times = explode(' - ', $request->golden_hour);
-            $request->merge([
-                'start_hour' => $times[0] ?? null,
-                'end_hour' => $times[1] ?? null,
-            ]);
-        }
-
-    $request->validate([
-        'name'            => 'required|string|max:255',
-        'date'            => 'required|date_format:Y-m-d', 
-        'start_hour'      => 'required|date_format:H:i',  
-        'end_hour'        => 'required|date_format:H:i',    
-        'discount_value'  => 'required|numeric|min:0|max:100',
-        'quantity_limit'  => 'required|integer|min:1',
-        'items'           => 'nullable|array',
-        'product_ids'     => 'nullable|array',
-    ]);
+        $request->validate([
+            'name'            => 'required|string|max:255',
+            'start_time'      => 'nullable|string',
+            'end_time'        => 'nullable|string',
+            'discount_value'  => 'required|numeric|min:0|max:100',
+            'quantity_limit'  => 'required|integer|min:1',
+            'items'           => 'nullable|array',
+            'product_ids'     => 'nullable|array',
+        ]);
 
         try {
             DB::beginTransaction();
 
             $flashSale = flash::findOrFail($id);
 
-            $startedTime = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $request->start_hour);
-            $endTime     = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $request->end_hour);
+            if ($request->filled('start_time') && $request->filled('end_time')) {
+                $startedTime = Carbon::parse($request->start_time);
+                $endTime     = Carbon::parse($request->end_time);
+            } elseif ($request->has('golden_hour') && $request->filled('date')) {
+                $times = explode(' - ', $request->golden_hour);
+                $startedTime = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . ($times[0] ?? '00:00'));
+                $endTime     = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . ($times[1] ?? '23:59'));
+            } else {
+                $startedTime = Carbon::parse(($request->date ?? date('Y-m-d')) . ' ' . ($request->start_hour ?? '00:00'));
+                $endTime     = Carbon::parse(($request->date ?? date('Y-m-d')) . ' ' . ($request->end_hour ?? '23:59'));
+            }
+
             $flashSale->update([
                 'name'       => $request->name,
                 'start_time' => $startedTime,

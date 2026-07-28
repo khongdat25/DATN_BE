@@ -15,6 +15,7 @@ use App\Http\Controllers\ProductApi;
 use App\Http\Controllers\SizeController;
 use App\Http\Controllers\ColorController;
 use App\Http\Controllers\BrandController;
+use App\Http\Controllers\RatingController;
 use App\Http\Controllers\VoucherController;
 use App\Models\Order;
 use App\Models\ProductModel;
@@ -99,6 +100,9 @@ Route::middleware('auth:api')->group(function () {
     Route::delete('/user/orders/{id}', [OrderController::class, 'userDestroy']);
     Route::post('/user/orders/{id}/cancel', [OrderController::class, 'userCancel']);
     Route::post('/user/orders/{id}/confirm-payment', [OrderController::class, 'userConfirmPayment']);
+
+    // Đánh giá sản phẩm (Rating)
+    Route::post('/ratings', [RatingController::class, 'store']);
 
     // Quản lý Sản phẩm (Admin Products)
     Route::get('/adminproduct', [ProductApi::class, 'admin_product']);

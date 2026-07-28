@@ -172,6 +172,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         $orders = Order::with([
+            'items.rating',
             'items.variant' => function ($query) {
                 $query->withTrashed();
             },

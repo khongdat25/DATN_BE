@@ -11,6 +11,12 @@ class rating extends Model
 
     protected $table = 'rating';
 
+    public const UPDATED_AT = null;
+
+    protected $fillable = [
+        'user_id', 'product_id', 'order_item_id', 'rating', 'comment',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
