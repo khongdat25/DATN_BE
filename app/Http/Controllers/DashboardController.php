@@ -13,18 +13,40 @@ class DashboardController extends Controller
 {
     /**
      * Lấy dữ liệu thống kê cho trang Dashboard của Admin.
+     * Đơn hàng được tính là ĐƠN HOÀN THÀNH khi:
+     * 1. Đã thanh toán (payment_status: paid, đã thanh toán, thành công, 1)
+     * 2. Đã giao hàng hoàn thành (status: delivered, completed, đã giao hàng, đã giao thành công, hoàn thành).
      */
     public function stats(Request $request)
     {
-        $revenue = Order::query()->whereNotIn('status', ['cancelled', 'đã hủy', 'huy'], 'and')->sum('total_amount');
-        $ordersCount = Order::query()->count('*');
+        $completedPayments = ['paid', 'đã thanh toán', 'thành công', 1];
+        $completedStatuses = ['delivered', 'completed', 'đã giao hàng', 'đã giao thành công', 'hoàn thành'];
+
+        // 1. Tổng doanh thu (Chỉ cộng tiền của các đơn hàng đã thanh toán VÀ giao hàng hoàn thành)
+        $revenue = Order::query()
+            ->whereIn('payment_status', $completedPayments, 'and', false)
+            ->whereIn('status', $completedStatuses, 'and', false)
+            ->sum('total_amount');
+
+        // 2. Tổng số đơn hàng đã hoàn thành (Đã thanh toán + Đã giao hàng)
+        $ordersCount = Order::query()
+            ->whereIn('payment_status', $completedPayments, 'and', false)
+            ->whereIn('status', $completedStatuses, 'and', false)
+            ->count('*');
+
+        // 3. Số lượng tài khoản khách hàng
         $customersCount = User::query()->where('role', '=', 'user', 'and')->count('*');
+
+        // 4. Tổng số lượng sản phẩm trong kho
         $productsCount = ProductModel::query()->count('*');
 
-        // Best sellers
+        // 5. Top sản phẩm bán chạy (Chỉ thống kê từ các đơn hàng đã thanh toán & hoàn thành)
         $bestSellersRaw = DB::table('order_item')
+            ->join('orders', 'order_item.order_id', '=', 'orders.id')
             ->join('product_variants', 'order_item.variant_id', '=', 'product_variants.id')
             ->join('products', 'product_variants.product_id', '=', 'products.id')
+            ->whereIn('orders.payment_status', $completedPayments, 'and', false)
+            ->whereIn('orders.status', $completedStatuses, 'and', false)
             ->select([
                 'products.id',
                 'products.name',
@@ -58,25 +80,30 @@ class DashboardController extends Controller
             ];
         });
 
-        // Recent orders
-        $recentOrders = Order::orderBy('created_at', 'desc')->take(5)->get()->map(function ($order) {
+        // 6. Danh sách 5 đơn hàng mới nhất
+        $recentOrders = Order::orderBy('created_at', 'desc')->take(5)->get()->map(function ($order) use ($completedPayments, $completedStatuses) {
             $statusStr = strtolower((string) $order->status);
-            $statusText = 'Chờ xử lý';
-            $statusClass = 'bg-amber-50 text-amber-700';
-            $bulletClass = 'bg-amber-500';
+            $paymentStatusStr = strtolower((string) $order->payment_status);
 
-            if (in_array($statusStr, ['đang giao', 'shipping', 'shipped'])) {
-                $statusText = 'Đang giao';
-                $statusClass = 'bg-blue-50 text-blue-700';
-                $bulletClass = 'bg-blue-500';
-            } elseif (in_array($statusStr, ['đã giao thành công', 'completed', 'delivered', 'hoàn thành'])) {
-                $statusText = 'Đã giao thành công';
+            $isCompletedStatus = in_array($statusStr, $completedStatuses);
+            $isPaidStatus = in_array($paymentStatusStr, ['paid', 'đã thanh toán', 'thành công', '1']);
+
+            if ($isCompletedStatus && $isPaidStatus) {
+                $statusText = 'Hoàn thành';
                 $statusClass = 'bg-emerald-50 text-emerald-700';
                 $bulletClass = 'bg-emerald-500';
+            } elseif (in_array($statusStr, ['đang giao', 'shipping', 'shipped'])) {
+                $statusText = 'Đang giao hàng';
+                $statusClass = 'bg-blue-50 text-blue-700';
+                $bulletClass = 'bg-blue-500';
             } elseif (in_array($statusStr, ['đã hủy', 'cancelled', 'canceled'])) {
                 $statusText = 'Đã hủy';
                 $statusClass = 'bg-red-50 text-red-700';
                 $bulletClass = 'bg-red-500';
+            } else {
+                $statusText = 'Chờ xử lý';
+                $statusClass = 'bg-amber-50 text-amber-700';
+                $bulletClass = 'bg-amber-500';
             }
 
             return [
@@ -92,14 +119,16 @@ class DashboardController extends Controller
             ];
         });
 
-        // CHART DATA
+        // 7. Biểu đồ doanh thu (Chỉ tính doanh thu các đơn hàng hoàn thành)
         $now = Carbon::now();
-        // 1. Week
+        // Biểu đồ Tuần
         $startOfWeek = $now->copy()->startOfWeek();
         $endOfWeek = $now->copy()->endOfWeek();
-        $weekData = Order::query()->select([DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_amount) as revenue')])
+        $weekData = Order::query()
+            ->select([DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_amount) as revenue')])
             ->whereBetween('created_at', [$startOfWeek, $endOfWeek])
-            ->whereNotIn('status', ['cancelled', 'đã hủy', 'huy'])
+            ->whereIn('payment_status', $completedPayments, 'and', false)
+            ->whereIn('status', $completedStatuses, 'and', false)
             ->groupBy(DB::raw('DATE(created_at)'))
             ->pluck('revenue', 'date');
 
@@ -113,12 +142,14 @@ class DashboardController extends Controller
             ];
         }
 
-        // 2. Month
+        // Biểu đồ Tháng
         $startOfMonth = $now->copy()->startOfMonth();
         $endOfMonth = $now->copy()->endOfMonth();
-        $monthData = Order::query()->select([DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_amount) as revenue')])
+        $monthData = Order::query()
+            ->select([DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_amount) as revenue')])
             ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
-            ->whereNotIn('status', ['cancelled', 'đã hủy', 'huy'])
+            ->whereIn('payment_status', $completedPayments, 'and', false)
+            ->whereIn('status', $completedStatuses, 'and', false)
             ->groupBy(DB::raw('DATE(created_at)'))
             ->pluck('revenue', 'date');
 
@@ -128,23 +159,25 @@ class DashboardController extends Controller
             ['label' => 'Tuần 3', 'value' => 0],
             ['label' => 'Tuần 4', 'value' => 0],
         ];
-        foreach ($monthData as $date => $revenue) {
+        foreach ($monthData as $date => $rev) {
             $day = Carbon::parse($date)->day;
             if ($day <= 7) {
-                $chartMonth[0]['value'] += (float) $revenue;
+                $chartMonth[0]['value'] += (float) $rev;
             } elseif ($day <= 14) {
-                $chartMonth[1]['value'] += (float) $revenue;
+                $chartMonth[1]['value'] += (float) $rev;
             } elseif ($day <= 21) {
-                $chartMonth[2]['value'] += (float) $revenue;
+                $chartMonth[2]['value'] += (float) $rev;
             } else {
-                $chartMonth[3]['value'] += (float) $revenue;
+                $chartMonth[3]['value'] += (float) $rev;
             }
         }
 
-        // 3. Year
-        $yearData = Order::query()->select([DB::raw('MONTH(created_at) as month'), DB::raw('SUM(total_amount) as revenue')])
+        // Biểu đồ Năm
+        $yearData = Order::query()
+            ->select([DB::raw('MONTH(created_at) as month'), DB::raw('SUM(total_amount) as revenue')])
             ->whereYear('created_at', $now->year)
-            ->whereNotIn('status', ['cancelled', 'đã hủy', 'huy'])
+            ->whereIn('payment_status', $completedPayments, 'and', false)
+            ->whereIn('status', $completedStatuses, 'and', false)
             ->groupBy(DB::raw('MONTH(created_at)'))
             ->pluck('revenue', 'month');
 

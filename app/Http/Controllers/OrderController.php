@@ -210,6 +210,26 @@ class OrderController extends Controller
         DB::beginTransaction();
         try {
             $order->status = 'cancelled';
+
+            if ($request->filled('reason')) {
+                $order->cancel_reason = $request->input('reason');
+            } elseif ($request->filled('cancel_reason')) {
+                $order->cancel_reason = $request->input('cancel_reason');
+            }
+
+            if ($request->filled('bank_name')) {
+                $order->bank_name = $request->input('bank_name');
+            }
+            if ($request->filled('bank_account_number')) {
+                $order->bank_account_number = $request->input('bank_account_number');
+            }
+            if ($request->filled('bank_account_name')) {
+                $order->bank_account_name = $request->input('bank_account_name');
+            }
+            if ($request->filled('refund_notes')) {
+                $order->refund_notes = $request->input('refund_notes');
+            }
+
             $order->save();
 
             // Khôi phục lượt dùng voucher
@@ -230,6 +250,25 @@ class OrderController extends Controller
                 }
             }
 
+            // Khôi phục lại giỏ hàng cho user nếu có yêu cầu (vd: hủy khi đang ở trang thanh toán QR)
+            if ($request->boolean('restore_cart')) {
+                foreach ($orderItems as $item) {
+                    $existingCart = Cart::where('user_id', '=', $user->id, 'and')
+                        ->where('variant_id', '=', $item->variant_id, 'and')
+                        ->first();
+                    if ($existingCart) {
+                        $existingCart->quantity += $item->quantity;
+                        $existingCart->save();
+                    } else {
+                        Cart::create([
+                            'user_id' => $user->id,
+                            'variant_id' => $item->variant_id,
+                            'quantity' => $item->quantity,
+                        ]);
+                    }
+                }
+            }
+
             DB::commit();
 
             return response()->json([
@@ -246,6 +285,27 @@ class OrderController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Xác nhận thanh toán thành công cho đơn hàng (khi redirect từ cổng thanh toán)
+     */
+    public function userConfirmPayment(Request $request, int $id)
+    {
+        $user = $request->user();
+        $order = Order::query()->where('id', '=', $id, 'and')->where('user_id', '=', $user->id, 'and')->firstOrFail();
+
+        if ($order->status === 'pending') {
+            $order->status = 'new';
+            $order->payment_status = 'paid';
+            $order->save();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Xác nhận thanh toán thành công',
+            'data' => $order,
+        ], 200);
     }
 
     /**

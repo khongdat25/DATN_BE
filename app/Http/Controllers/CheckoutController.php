@@ -234,8 +234,8 @@ class CheckoutController extends Controller
                         'orderCode' => $order->id,
                         'amount' => (int) $total,
                         'description' => 'SGS-'.$order->id,
-                        'cancelUrl' => $baseUrl.'/checkout?status=cancelled&order_id='.$order->id,
-                        'returnUrl' => $baseUrl.'/profile?tab=orders&status=success&order_id='.$order->id,
+                        'cancelUrl' => $baseUrl.'/checkout?payment_cancel=1&order_id='.$order->id,
+                        'returnUrl' => $baseUrl.'/profile?tab=orders&payment_success=1&order_id='.$order->id,
                     ];
 
                     $payOSResponse = $payOS->createPaymentLink($paymentData);

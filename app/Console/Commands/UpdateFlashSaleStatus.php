@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Models\FlashSale;
+use App\Models\Flashsale;
 
 class UpdateFlashSaleStatus extends Command
 {
@@ -21,22 +21,16 @@ class UpdateFlashSaleStatus extends Command
      */
     public function handle()
     {
-         $now = now();
+        $now = now();
 
-        // Chờ -> Đang diễn ra
-        FlashSale::where('status', 1)
-            ->where('start_time', '<=', $now)
-            ->update([
-                'status' => 2
-            ]);
-
-        // Đang diễn ra -> Đã kết thúc
-        FlashSale::where('status', 2)
+        // Tự động kết thúc chiến dịch nếu đã quá giờ end_time
+        Flashsale::query()
+            ->where('status', '!=', 3)
             ->where('end_time', '<=', $now)
             ->update([
                 'status' => 3
             ]);
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 }

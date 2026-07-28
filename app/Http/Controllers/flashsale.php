@@ -15,6 +15,12 @@ class flashsale extends Controller
      */
     public function show(Request $request)
     {
+        $now = Carbon::now();
+        flash::query()
+            ->where('status', '!=', 3)
+            ->where('end_time', '<', $now)
+            ->update(['status' => 3]);
+
         $data = flash::query()
             ->withCount(['items as total']);
 
@@ -24,15 +30,18 @@ class flashsale extends Controller
 
         $sale = $data->with([
             'items' => function($q) {
-                $q->select('id', 'flash_sale_id', 'product_id', 'discount_value', 'quantity_limit', 'sold');
+                $q->select('id', 'flash_sale_id', 'product_id', 'variant_id', 'discount_value', 'quantity_limit', 'sold');
             },
             'items.product',
-            'items.product.variants'=> function($q) {
-                $q->select('id', 'product_id', 'price');
-            }
-        ])->get(['id', 'name', 'start_time', 'end_time', 'status']); 
-            return response()->json(
-        [
+            'items.product.variants',
+            'items.variant',
+            'items.variant.size',
+            'items.variant.color'
+        ])
+        ->orderBy('id', 'desc')
+        ->get(['id', 'name', 'start_time', 'end_time', 'status']); 
+
+        return response()->json([
             'success' => true,
             'message' => 'Hiển thị và lọc flashsale',
             'data' => $sale,
@@ -63,53 +72,68 @@ class flashsale extends Controller
         ]);
     }
     $request->validate([
-         'name'            => 'required|string|max:255',
+        'name'            => 'required|string|max:255',
         'date'            => 'required|date_format:Y-m-d', 
         'start_hour'      => 'required|date_format:H:i',  
         'end_hour'        => 'required|date_format:H:i',    
         'discount_value'  => 'required|numeric|min:0|max:100',
         'quantity_limit'  => 'required|integer|min:1',
-        'product_ids'     => 'required|array',
-        'product_ids.*'   => 'required|integer'
+        'items'           => 'nullable|array',
+        'product_ids'     => 'nullable|array',
     ]);
     DB::beginTransaction();
 
-            $startedTime = Carbon::createFromFormat('Y-m-d H:i', $request->date.' '.$request->start_hour);
-            $endTime = Carbon::createFromFormat('Y-m-d H:i', $request->date.' '.$request->end_hour);
+    $startedTime = Carbon::createFromFormat('Y-m-d H:i', $request->date.' '.$request->start_hour);
+    $endTime = Carbon::createFromFormat('Y-m-d H:i', $request->date.' '.$request->end_hour);
 
     try {
         $create = flash::create([
-            'name'         => $request->name,
+            'name'       => $request->name,
             'start_time' => $startedTime,
-            'end_time'     => $endTime,
+            'end_time'   => $endTime,
+            'status'     => 1,
         ]);
-        foreach($request->product_ids as $item) {
-            Flashsaleitem::create([
-                'flash_sale_id' => $create->id,
-                'product_id'    => $item,
-                'discount_value' => $request->discount_value,
-                'quantity_limit' => $request->quantity_limit,
+
+        if ($request->filled('items') && is_array($request->items)) {
+            foreach ($request->items as $item) {
+                Flashsaleitem::create([
+                    'flash_sale_id'  => $create->id,
+                    'product_id'     => $item['product_id'],
+                    'variant_id'     => $item['variant_id'] ?? null,
+                    'discount_value' => $request->discount_value,
+                    'quantity_limit' => $request->quantity_limit,
                 ]);
             }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'success',
-                'data' => $create,
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'success' => false,
-                'message' => 'failed :(',
-                'error' => $e->getMessage(),
-            ], 500);
+        } elseif ($request->filled('product_ids') && is_array($request->product_ids)) {
+            foreach ($request->product_ids as $pId) {
+                Flashsaleitem::create([
+                    'flash_sale_id'  => $create->id,
+                    'product_id'     => $pId,
+                    'variant_id'     => null,
+                    'discount_value' => $request->discount_value,
+                    'quantity_limit' => $request->quantity_limit,
+                ]);
+            }
         }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'success',
+            'data' => $create,
+        ], 201);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'success' => false,
+            'message' => 'failed :(',
+            'error' => $e->getMessage(),
+        ], 500);
     }
+}
 
     /**
      * Cập nhật thông tin chiến dịch flashsale.
@@ -131,8 +155,8 @@ class flashsale extends Controller
         'end_hour'        => 'required|date_format:H:i',    
         'discount_value'  => 'required|numeric|min:0|max:100',
         'quantity_limit'  => 'required|integer|min:1',
-        'product_ids'     => 'required|array',
-        'product_ids.*'   => 'required|integer'
+        'items'           => 'nullable|array',
+        'product_ids'     => 'nullable|array',
     ]);
 
         try {
@@ -140,22 +164,36 @@ class flashsale extends Controller
 
             $flashSale = flash::findOrFail($id);
 
-        $startedTime = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $request->start_hour);
-        $endTime     = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $request->end_hour);
-        $flashSale->update([
-            'name'       => $request->name,
-            'start_time' => $startedTime,
-            'end_time'   => $endTime,
-        ]);
-        Flashsaleitem::where('flash_sale_id', $flashSale->id)->delete();
-        foreach($request->product_ids as $item) {
-            Flashsaleitem::create([
-                'flash_sale_id'  => $flashSale->id,
-                'product_id'     => $item, 
-                'discount_value' => $request->discount_value,
-                'quantity_limit' => $request->quantity_limit,
+            $startedTime = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $request->start_hour);
+            $endTime     = Carbon::createFromFormat('Y-m-d H:i', $request->date . ' ' . $request->end_hour);
+            $flashSale->update([
+                'name'       => $request->name,
+                'start_time' => $startedTime,
+                'end_time'   => $endTime,
             ]);
-        }
+            Flashsaleitem::query()->where('flash_sale_id', $flashSale->id)->delete();
+
+            if ($request->filled('items') && is_array($request->items)) {
+                foreach ($request->items as $item) {
+                    Flashsaleitem::create([
+                        'flash_sale_id'  => $flashSale->id,
+                        'product_id'     => $item['product_id'],
+                        'variant_id'     => $item['variant_id'] ?? null,
+                        'discount_value' => $request->discount_value,
+                        'quantity_limit' => $request->quantity_limit,
+                    ]);
+                }
+            } elseif ($request->filled('product_ids') && is_array($request->product_ids)) {
+                foreach ($request->product_ids as $pId) {
+                    Flashsaleitem::create([
+                        'flash_sale_id'  => $flashSale->id,
+                        'product_id'     => $pId,
+                        'variant_id'     => null,
+                        'discount_value' => $request->discount_value,
+                        'quantity_limit' => $request->quantity_limit,
+                    ]);
+                }
+            }
 
             DB::commit();
 

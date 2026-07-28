@@ -317,6 +317,7 @@ class AuthController extends Controller
             'phone' => 'required|string|max:20',
             'birthday' => 'nullable|date',
             'gender' => 'nullable|string|max:20',
+            'avatar' => 'nullable|string',
         ], [
             'name.required' => 'Họ và tên là bắt buộc.',
             'phone.required' => 'Số điện thoại là bắt buộc.',
@@ -336,6 +337,7 @@ class AuthController extends Controller
             'phone' => $request->phone,
             'birthday' => $request->birthday,
             'gender' => $request->gender,
+            'avatar' => $request->avatar,
         ]);
 
         return response()->json([
@@ -351,6 +353,7 @@ class AuthController extends Controller
                     'status' => $user->status,
                     'birthday' => $user->birthday,
                     'gender' => $user->gender,
+                    'avatar' => $user->avatar,
                 ],
             ],
         ], 200);
@@ -472,6 +475,7 @@ class AuthController extends Controller
                     'status' => $user->status,
                     'birthday' => $user->birthday,
                     'gender' => $user->gender,
+                    'avatar' => $user->avatar,
                 ],
             ],
         ], 200);

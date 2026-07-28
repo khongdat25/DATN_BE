@@ -14,6 +14,7 @@ class Order extends Model
     protected $fillable = [
         'user_id', 'name', 'email', 'phone', 'address', 'note',
         'total_amount', 'voucher_id', 'payment_method_id', 'payment_status', 'status',
+        'cancel_reason', 'bank_name', 'bank_account_number', 'bank_account_name', 'refund_notes',
     ];
 
     public function items()

@@ -93,20 +93,34 @@ class ProductApi extends Controller
     public function FlashSale()
     {
         $now = Carbon::now();
-       $flashSales = Flashsale::query()->with(['items:id,flash_sale_id,sold,quantity_limit,discount_value,product_variant_id',
-                                        'items.productVariant:id,product_id,size_id,color_id,image,stock,price',
-                                        'items.productVariant.product:id,name,slug,category_id,brand_id'])
-                                                ->where(['status' => 2])
-                                                ->where('start_time', '<=', $now)
-                                                ->where('end_time', '>=', $now)
-                                                ->take(5)
-                                                ->get();
-        return response()->json(
-            [
-                'success' => true,
-                'message' => 'Flash Sale',
-                'data' => $flashSales,
-            ], 200);
+
+        // 1. Tự động kết thúc các chiến dịch hết hạn
+        Flashsale::query()
+            ->where('status', '!=', 3)
+            ->where('end_time', '<', $now)
+            ->update(['status' => 3]);
+
+        // 2. Chỉ lấy chiến dịch đang bật (status = 1) và NẰM TRONG KHUNG GIỜ VÀNG (start_time <= now <= end_time)
+        $flashSales = Flashsale::query()
+            ->with([
+                'items' => function ($q) {
+                    $q->select('id', 'flash_sale_id', 'product_id', 'variant_id', 'discount_value', 'quantity_limit', 'sold');
+                },
+                'items.product:id,name,slug,category_id,brand_id,images',
+                'items.product.variants:id,product_id,size_id,color_id,sku,stock,price,sale,image',
+            ])
+            ->where('status', 1)
+            ->where('start_time', '<=', $now)
+            ->where('end_time', '>=', $now)
+            ->orderBy('id', 'desc')
+            ->take(5)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Flash Sale',
+            'data' => $flashSales,
+        ], 200);
     }
 
     /* gọi sp bán chạy */
@@ -193,6 +207,14 @@ class ProductApi extends Controller
             ->get(['id', 'slug', 'name', 'sold', 'brand_id', 'category_id', 'images']);
         $related = $related->sortBy(fn ($item) => $item->min_price)->values();
         $related->each(fn ($item) => $item->setRelation('variants', $item->variants->take(1)));
+
+        if ($product->relationLoaded('variants')) {
+            $product->setRelation('variants', $product->variants->sortBy(function ($v) {
+                $sizeName = $v->size ? $v->size->name : ($v->size_id ?? '');
+                $num = is_numeric($sizeName) ? (float) $sizeName : 999;
+                return sprintf('%08.2f_%s', $num, $sizeName);
+            })->values());
+        }
 
         return response()->json(
             [
@@ -315,11 +337,22 @@ class ProductApi extends Controller
             $products->where(['status' => $request->status]);
         }
 
+        $data = $products->get();
+        $data->each(function ($p) {
+            if ($p->relationLoaded('variants')) {
+                $p->setRelation('variants', $p->variants->sortBy(function ($v) {
+                    $sizeName = $v->size ? $v->size->name : ($v->size_id ?? '');
+                    $num = is_numeric($sizeName) ? (float) $sizeName : 999;
+                    return sprintf('%08.2f_%s', $num, $sizeName);
+                })->values());
+            }
+        });
+
         return response()->json(
             [
                 'success' => true,
                 'message' => 'all product for admin product page',
-                'data' => $products->get(),
+                'data' => $data,
 
             ], 200);
     }

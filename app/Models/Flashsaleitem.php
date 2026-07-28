@@ -14,12 +14,16 @@ class Flashsaleitem extends Model
     use SoftDeletes;
 
     protected $table = 'flash_sales_items';
-    protected $fillable = ['flash_sale_id', 'product_id', 'discount_value', 'quantity_limit'];
+    protected $fillable = ['flash_sale_id', 'product_id', 'variant_id', 'discount_value', 'quantity_limit'];
 
     public $timestamps = false;
 
     public function product(){
         return $this->belongsTo(ProductModel::class);
+    }
+
+    public function variant(){
+        return $this->belongsTo(Variant::class, 'variant_id');
     }
 
     public function flashSale()
