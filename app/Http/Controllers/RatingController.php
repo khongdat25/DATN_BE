@@ -79,4 +79,158 @@ class RatingController extends Controller
             'data'    => $ratingObj,
         ], 201);
     }
+
+    /**
+     * Danh sách đánh giá dành cho Admin
+     */
+    public function adminIndex(Request $request)
+    {
+        $query = rating::query()
+            ->with([
+                'user:id,name,email,avatar',
+                'product:id,name,images,category_id',
+                'product.category:id,name',
+                'orderItem:id,variant_id',
+                'orderItem.variant:id,size_id,color_id',
+                'orderItem.variant.size:id,name',
+                'orderItem.variant.color:id,name',
+            ])
+            ->orderBy('id', 'desc');
+
+        if ($request->filled('rating') && $request->rating !== 'all') {
+            $query->where('rating', (int) $request->rating);
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('q')) {
+            $search = $request->q;
+            $query->where(function ($q) use ($search) {
+                $q->where('comment', 'like', "%{$search}%")
+                  ->orWhereHas('user', function ($uq) use ($search) {
+                      $uq->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('product', function ($pq) use ($search) {
+                      $pq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $data = $query->get()->map(function ($r) {
+            $customerName = $r->user ? $r->user->name : 'Khách hàng';
+            $customerEmail = $r->user ? $r->user->email : 'N/A';
+            $customerAvatar = $r->user ? $r->user->avatar : null;
+
+            $productName = $r->product ? $r->product->name : 'Sản phẩm';
+            $productCategory = ($r->product && $r->product->category) ? $r->product->category->name : 'Thương hiệu';
+            $productImages = $r->product ? $r->product->images : [];
+            $productImage = is_array($productImages) && count($productImages) > 0 ? $productImages[0] : '';
+
+            $sizeName = ($r->orderItem && $r->orderItem->variant && $r->orderItem->variant->size) ? $r->orderItem->variant->size->name : '';
+            $colorName = ($r->orderItem && $r->orderItem->variant && $r->orderItem->variant->color) ? $r->orderItem->variant->color->name : '';
+
+            $detailsStr = [];
+            if ($sizeName) $detailsStr[] = "Size: {$sizeName}";
+            if ($colorName) $detailsStr[] = "Màu: {$colorName}";
+            $purchaseDetails = count($detailsStr) > 0 ? implode(' | ', $detailsStr) : 'Đã mua hàng thực tế';
+
+            return [
+                'id' => $r->id,
+                'customer' => [
+                    'name' => $customerName,
+                    'email' => $customerEmail,
+                    'avatar' => $customerAvatar,
+                ],
+                'product' => [
+                    'name' => $productName,
+                    'image' => $productImage,
+                    'category' => $productCategory,
+                ],
+                'rating' => (int) $r->rating,
+                'purchaseDetails' => $purchaseDetails,
+                'date' => $r->created_at ? $r->created_at->format('d/m/Y H:i') : '',
+                'comment' => $r->comment ?: 'Không có nhận xét văn bản.',
+                'status' => $r->status ?: 'pending',
+                'reply' => $r->reply,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lấy danh sách đánh giá thành công',
+            'data' => $data,
+        ], 200);
+    }
+
+    /**
+     * Admin phản hồi đánh giá của khách hàng
+     */
+    public function adminReply(Request $request, int $id)
+    {
+        $request->validate([
+            'reply' => 'required|string|max:1000',
+        ]);
+
+        $ratingObj = rating::find($id);
+        if (! $ratingObj) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy đánh giá'], 404);
+        }
+
+        $ratingObj->update([
+            'reply'  => $request->reply,
+            'status' => 'replied',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã gửi phản hồi thành công!',
+            'data'    => $ratingObj,
+        ], 200);
+    }
+
+    /**
+     * Admin chuyển trạng thái hiển thị / ẩn bình luận
+     */
+    public function adminUpdateStatus(Request $request, int $id)
+    {
+        $request->validate([
+            'status' => 'required|string|in:pending,replied,hidden',
+        ]);
+
+        $ratingObj = rating::find($id);
+        if (! $ratingObj) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy đánh giá'], 404);
+        }
+
+        $ratingObj->update([
+            'status' => $request->status,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Cập nhật trạng thái thành công!',
+            'data'    => $ratingObj,
+        ], 200);
+    }
+
+    /**
+     * Admin xóa đánh giá
+     */
+    public function adminDestroy(int $id)
+    {
+        $ratingObj = rating::find($id);
+        if (! $ratingObj) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy đánh giá'], 404);
+        }
+
+        $ratingObj->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã xóa đánh giá thành công',
+        ], 200);
+    }
 }

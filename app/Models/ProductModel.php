@@ -23,6 +23,7 @@ class ProductModel extends Model
         'status',
         'sold',
         'images',
+        'is_featured',
     ];
 
     public $timestamps = false;
@@ -95,5 +96,6 @@ class ProductModel extends Model
 
     protected $casts = [
         'images' => 'array',
+        'is_featured' => 'boolean',
     ];
 }

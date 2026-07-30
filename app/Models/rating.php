@@ -14,7 +14,7 @@ class rating extends Model
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'user_id', 'product_id', 'order_item_id', 'rating', 'comment',
+        'user_id', 'product_id', 'order_item_id', 'rating', 'comment', 'reply', 'status',
     ];
 
     public function user()

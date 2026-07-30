@@ -145,13 +145,13 @@ class ProductApi extends Controller
             ], 200);
     }
 
-    /* gọi sp nổi bật, điều kiện trong bảng brand có is_feature khác 0 */
+    /* gọi sp nổi bật, điều kiện sp có is_featured khác 0 và đang bật status = 1 */
 
     public function HotProduct()
     {
-        $products = ProductModel::query()->whereHas('brand', function ($q) {
-            $q->where('is_featured', 1);
-        })
+        $products = ProductModel::query()
+            ->where('is_featured', 1)
+            ->where('status', 1)
             ->with(['brand:id,name',
                 'variants:product_id,size_id,price,sale',
                 'variants.size:id,name',
@@ -159,8 +159,7 @@ class ProductApi extends Controller
             ])
             ->withAvg('rating as avg_rating', 'rating')
             ->orderByRaw('sold desc')
-            ->take(5)
-            ->get(['id', 'name', 'slug', 'sold', 'category_id', 'brand_id', 'images']);
+            ->get(['id', 'name', 'slug', 'sold', 'category_id', 'brand_id', 'images', 'is_featured']);
 
         return response()->json(
             [
@@ -181,7 +180,10 @@ class ProductApi extends Controller
             'category:id,name',
             'variants.color:id,name',
             'variants.size:id,name',
-            'rating:product_id,rating,comment,created_at,user_id',
+            'rating' => function ($rq) {
+                $rq->where('status', '!=', 'hidden')
+                   ->select('id', 'product_id', 'rating', 'comment', 'reply', 'created_at', 'user_id');
+            },
             'rating.user:id,name',
         ]);
 
@@ -450,6 +452,7 @@ class ProductApi extends Controller
                 'brand_id' => $request->brand_id,
                 'description' => $request->description,
                 'images' => $request->images,
+                'is_featured' => $request->is_featured ? 1 : 0,
                 'status' => 1,
                 'sold' => 0,
             ]);
@@ -538,6 +541,7 @@ class ProductApi extends Controller
                 'brand_id' => $request->brand_id,
                 'description' => $request->description,
                 'images' => $request->images,
+                'is_featured' => $request->has('is_featured') ? ($request->is_featured ? 1 : 0) : $product->is_featured,
             ]);
             $word = Str::slug($request->name, ' ');
             $words = explode(' ', $word);
@@ -666,5 +670,142 @@ class ProductApi extends Controller
             'success' => false,
             'message' => 'Không tìm thấy file ảnh tải lên!',
         ], 400);
+    }
+
+    public function toggleFeatured(int $id)
+    {
+        $product = ProductModel::find($id, ['*']);
+        if (! $product) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy sản phẩm!'], 404);
+        }
+
+        $product->update([
+            'is_featured' => ! $product->is_featured,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Cập nhật trạng thái nổi bật thành công!',
+            'is_featured' => $product->is_featured,
+        ], 200);
+    }
+
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'products' => 'required|array|min:1',
+            'products.*.name' => 'required|string',
+            'products.*.category_id' => 'required|integer',
+            'products.*.brand_id' => 'required|integer',
+            'products.*.variants' => 'required|array|min:1',
+        ]);
+
+        $createdCount = 0;
+        $errors = [];
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($request->products as $index => $prodData) {
+                $rowNum = $index + 1;
+                $name = trim($prodData['name']);
+                if (empty($name)) {
+                    $errors[] = "Dòng {$rowNum}: Tên sản phẩm không được để trống";
+                    continue;
+                }
+
+                $catExists = Category::query()->where(['id' => $prodData['category_id']])->exists();
+                $brandExists = Brand::query()->where(['id' => $prodData['brand_id']])->exists();
+
+                if (! $catExists) {
+                    $errors[] = "Dòng {$rowNum} ('{$name}'): Danh mục ID {$prodData['category_id']} không tồn tại";
+                    continue;
+                }
+                if (! $brandExists) {
+                    $errors[] = "Dòng {$rowNum} ('{$name}'): Thương hiệu ID {$prodData['brand_id']} không tồn tại";
+                    continue;
+                }
+
+                $images = isset($prodData['images']) && is_array($prodData['images']) ? $prodData['images'] : [];
+
+                $product = ProductModel::create([
+                    'name' => $name,
+                    'slug' => Str::slug($name) . '-' . Str::random(4),
+                    'category_id' => $prodData['category_id'],
+                    'brand_id' => $prodData['brand_id'],
+                    'description' => $prodData['description'] ?? '',
+                    'images' => $images,
+                    'is_featured' => ! empty($prodData['is_featured']) ? 1 : 0,
+                    'status' => 1,
+                    'sold' => 0,
+                ]);
+
+                $word = Str::slug($name, ' ');
+                $words = explode(' ', $word);
+                $productCode = '';
+                foreach ($words as $w) {
+                    if (! empty($w)) {
+                        $productCode .= strtoupper(substr($w, 0, 1));
+                    }
+                }
+
+                foreach ($prodData['variants'] as $vData) {
+                    $sizeId = $vData['size_id'] ?? null;
+                    $colorId = $vData['color_id'] ?? null;
+                    $price = $vData['price'] ?? 0;
+                    $stock = $vData['stock'] ?? 0;
+
+                    if (! $sizeId || ! $colorId) continue;
+
+                    $colorCode = 'CLR' . $colorId;
+                    $sizeCode = 'SZ' . $sizeId;
+
+                    do {
+                        $autoSku = strtoupper($productCode . '-' . $colorCode . '-' . $sizeCode . '-' . Str::random(4));
+                        $skuExists = Variant::query()->where(['sku' => $autoSku])->exists();
+                    } while ($skuExists);
+
+                    Variant::create([
+                        'product_id' => $product->id,
+                        'size_id' => $sizeId,
+                        'color_id' => $colorId,
+                        'stock' => $stock,
+                        'sku' => $autoSku,
+                        'price' => $price,
+                        'sale' => $vData['sale'] ?? null,
+                        'image' => $vData['image'] ?? null,
+                        'status' => 1,
+                    ]);
+                }
+
+                $createdCount++;
+            }
+
+            if (count($errors) > 0 && $createdCount === 0) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Lỗi nhập dữ liệu từ Excel!',
+                    'errors' => $errors,
+                ], 422);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Đã nhập thành công {$createdCount} sản phẩm từ file Excel!",
+                'created_count' => $createdCount,
+                'warnings' => $errors,
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Nhập file Excel thất bại!',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

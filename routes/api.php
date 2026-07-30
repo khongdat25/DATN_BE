@@ -17,6 +17,7 @@ use App\Http\Controllers\ColorController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\VoucherController;
+use App\Http\Controllers\BannerController;
 use App\Models\Order;
 use App\Models\ProductModel;
 use App\Models\User;
@@ -41,7 +42,7 @@ Route::get('/getbrands', [ProductApi::class, 'getBrands']);
 Route::get('/getcategories', [ProductApi::class, 'getCategories']);
 // sản phẩm
 Route::get('/products', [ProductApi::class, 'index']);
-Route::get('/banner', [ProductApi::class, 'Banner']);
+Route::get('/banner', [BannerController::class, 'publicIndex']);
 Route::get('/categories', [ProductApi::class, 'HotCategories']);
 Route::get('/flashsales', [ProductApi::class, 'FlashSale']);
 Route::get('/bestsellings', [ProductApi::class, 'BestSelling']);
@@ -108,6 +109,8 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/adminproduct', [ProductApi::class, 'admin_product']);
     Route::post('/product_add', [ProductApi::class, 'product_add']);
     Route::post('/product_edit/{id}', [ProductApi::class, 'product_edit']);
+    Route::post('/product_import_excel', [ProductApi::class, 'importExcel']);
+    Route::patch('/product/toggle-featured/{id}', [ProductApi::class, 'toggleFeatured']);
     Route::delete('/product/{id}', [ProductApi::class, 'product_delete']);
     Route::delete('/variant/{v}', [ProductApi::class, 'variant_delete']);
     Route::post('/upload', [ProductApi::class, 'uploadImage']);
@@ -178,6 +181,19 @@ Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
     Route::put('/users/{id}', [UserController::class, 'update']);
     Route::put('/users/{id}/status', [UserController::class, 'updateStatus']);
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+    // Quản lý Đánh giá (Admin Reviews)
+    Route::get('/reviews', [RatingController::class, 'adminIndex']);
+    Route::post('/reviews/{id}/reply', [RatingController::class, 'adminReply']);
+    Route::put('/reviews/{id}/status', [RatingController::class, 'adminUpdateStatus']);
+    Route::delete('/reviews/{id}', [RatingController::class, 'adminDestroy']);
+
+    // Quản lý Banner (Admin Banners)
+    Route::get('/banners', [BannerController::class, 'adminIndex']);
+    Route::post('/banners', [BannerController::class, 'store']);
+    Route::put('/banners/{id}', [BannerController::class, 'update']);
+    Route::patch('/banners/{id}/toggle', [BannerController::class, 'toggleStatus']);
+    Route::delete('/banners/{id}', [BannerController::class, 'destroy']);
 });
 
 
