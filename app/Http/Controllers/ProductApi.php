@@ -16,9 +16,13 @@ use Illuminate\Support\Str;
 class ProductApi extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * @OA\Get(
+     *     path="/api/products",
+     *     summary="Danh sách tất cả sản phẩm (Công khai)",
+     *     tags={"Sản phẩm (Product)"},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
-    /* demo test gọi toàn bộ sp */
     public function index()
     {
         $products = ProductModel::query()->with([
@@ -38,8 +42,6 @@ class ProductApi extends Controller
             ], 200);
     }
 
-    /* gọi banner */
-
     public function Banner()
     {
         $banners = Banners::take(3)->get(['id', 'name', 'image']);
@@ -52,6 +54,14 @@ class ProductApi extends Controller
             ], 200);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/getcategories",
+     *     summary="Lấy danh sách rút gọn các danh mục",
+     *     tags={"Sản phẩm (Product)"},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
+     */
     public function getCategories()
     {
         $category = Category::get(['id', 'name']);
@@ -64,6 +74,14 @@ class ProductApi extends Controller
             ], 200);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/getbrands",
+     *     summary="Lấy danh sách rút gọn các thương hiệu",
+     *     tags={"Sản phẩm (Product)"},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
+     */
     public function getBrands()
     {
         $brand = Brand::get(['id', 'name']);
@@ -76,6 +94,14 @@ class ProductApi extends Controller
             ], 200);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/categories",
+     *     summary="Lấy danh sách danh mục nổi bật",
+     *     tags={"Sản phẩm (Product)"},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
+     */
     public function HotCategories()
     {
         $categories = Category::withCount('products')->take(6)->get(['name', 'img']);
@@ -88,19 +114,23 @@ class ProductApi extends Controller
             ], 200);
     }
 
-    /* gọi sp flashsale */
-
+    /**
+     * @OA\Get(
+     *     path="/api/flashsales",
+     *     summary="Danh sách sản phẩm Flash Sale đang diễn ra",
+     *     tags={"Sản phẩm (Product)"},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
+     */
     public function FlashSale()
     {
         $now = Carbon::now();
 
-        // 1. Tự động kết thúc các chiến dịch hết hạn
         Flashsale::query()
             ->where('status', '!=', 3)
             ->where('end_time', '<', $now)
             ->update(['status' => 3]);
 
-        // 2. Chỉ lấy chiến dịch đang bật (status = 1) và NẰM TRONG KHUNG GIỜ VÀNG (start_time <= now <= end_time)
         $flashSales = Flashsale::query()
             ->with([
                 'items' => function ($q) {
@@ -123,8 +153,14 @@ class ProductApi extends Controller
         ], 200);
     }
 
-    /* gọi sp bán chạy */
-
+    /**
+     * @OA\Get(
+     *     path="/api/bestsellings",
+     *     summary="Danh sách sản phẩm bán chạy nhất",
+     *     tags={"Sản phẩm (Product)"},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
+     */
     public function BestSelling()
     {
         $products = ProductModel::query()->where(['status' => 1])
@@ -145,8 +181,14 @@ class ProductApi extends Controller
             ], 200);
     }
 
-    /* gọi sp nổi bật, điều kiện sp có is_featured khác 0 và đang bật status = 1 */
-
+    /**
+     * @OA\Get(
+     *     path="/api/hotproducts",
+     *     summary="Danh sách sản phẩm nổi bật (Hot Products)",
+     *     tags={"Sản phẩm (Product)"},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
+     */
     public function HotProduct()
     {
         $products = ProductModel::query()
@@ -169,8 +211,16 @@ class ProductApi extends Controller
             ], 200);
     }
 
-    /* lấy chi tiết sp theo slug hoặc id */
-
+    /**
+     * @OA\Get(
+     *     path="/api/product/{slug}",
+     *     summary="Chi tiết sản phẩm theo Slug hoặc ID",
+     *     tags={"Sản phẩm (Product)"},
+     *     @OA\Parameter(name="slug", in="path", required=true, description="ID hoặc Slug sản phẩm", @OA\Schema(type="string")),
+     *     @OA\Response(response=200, description="Thành công"),
+     *     @OA\Response(response=404, description="Không tìm thấy sản phẩm")
+     * )
+     */
     public function Detail(string $slug)
     {
         // Nếu tham số là số nguyên → tìm theo id, ngược lại tìm theo slug
@@ -226,19 +276,22 @@ class ProductApi extends Controller
             ], 200);
     }
 
-    /*tìm kiếm sp :8000/api/search?
-    q='tên sp ở đây'
-    &
-    category_id='id danh mục'
-    &
-    min_price='giá thấp nhất'
-    &
-    max_price='giá cao nhất'
-    &
-    size = 'nhập size vào'
-    &
-    sort= 'lọc: price_"asc/desc", sold_"asc/desc", newest/oldest */
-
+    /**
+     * @OA\Get(
+     *     path="/api/search",
+     *     summary="Tìm kiếm & Lọc sản phẩm",
+     *     tags={"Sản phẩm (Product)"},
+     *     @OA\Parameter(name="q", in="query", required=false, description="Từ khóa tìm kiếm tên sản phẩm", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="category_id", in="query", required=false, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="brand_id", in="query", required=false, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="min_price", in="query", required=false, @OA\Schema(type="number")),
+     *     @OA\Parameter(name="max_price", in="query", required=false, @OA\Schema(type="number")),
+     *     @OA\Parameter(name="size", in="query", required=false, description="Kích thước (ví dụ 42)", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="sort", in="query", required=false, description="Lọc: price_asc, price_desc, sold_desc, sold_asc, newest, oldest", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="limit", in="query", required=false, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Thành công")
+     * )
+     */
     public function Search(Request $request)
     {
         $products = ProductModel::query()
@@ -311,6 +364,19 @@ class ProductApi extends Controller
             ], 200);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/api/adminproduct",
+     *     summary="[Admin] Danh sách tất cả sản phẩm kèm biến thể",
+     *     tags={"Quản lý Sản phẩm (Admin Product)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="q", in="query", required=false, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="category_id", in="query", required=false, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="brand_id", in="query", required=false, @OA\Schema(type="integer")),
+     *     @OA\Parameter(name="status", in="query", required=false, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Thành công")
+     * )
+     */
     public function admin_product(Request $request)
     {
         $products = ProductModel::query()
@@ -359,6 +425,17 @@ class ProductApi extends Controller
             ], 200);
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/api/product/{id}",
+     *     summary="[Admin] Xóa sản phẩm",
+     *     tags={"Quản lý Sản phẩm (Admin Product)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xóa thành công"),
+     *     @OA\Response(response=400, description="Sản phẩm đang có đơn hàng xử lý")
+     * )
+     */
     public function product_delete(int $id)
     {
         $product = ProductModel::find($id, ['*']);
@@ -366,7 +443,6 @@ class ProductApi extends Controller
             return response()->json(['success' => false, 'message' => 'no product found'], 404);
         }
 
-        // Kiểm tra xem sản phẩm có biến thể nào nằm trong đơn hàng đang xử lý/giao hàng không
         $variantIds = $product->variants()->pluck('id');
         $hasActiveOrders = DB::table('order_item')
             ->join('orders', 'order_item.order_id', '=', 'orders.id')
@@ -391,6 +467,16 @@ class ProductApi extends Controller
             ], 200);
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/api/variant/{v}",
+     *     summary="[Admin] Xóa biến thể sản phẩm",
+     *     tags={"Quản lý Sản phẩm (Admin Product)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="v", in="path", required=true, description="Variant ID", @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xóa thành công")
+     * )
+     */
     public function variant_delete(Variant $v)
     {
         // Kiểm tra xem biến thể có nằm trong đơn hàng đang xử lý/giao hàng không
@@ -415,6 +501,34 @@ class ProductApi extends Controller
         ], 200);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/product_add",
+     *     summary="[Admin] Thêm sản phẩm mới kèm danh sách biến thể",
+     *     tags={"Quản lý Sản phẩm (Admin Product)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","category_id","brand_id","variants"},
+     *             @OA\Property(property="name", type="string", example="Giày Nike Air Force 1"),
+     *             @OA\Property(property="category_id", type="integer", example=1),
+     *             @OA\Property(property="brand_id", type="integer", example=1),
+     *             @OA\Property(property="description", type="string", example="Mô tả sản phẩm..."),
+     *             @OA\Property(property="images", type="array", @OA\Items(type="string")),
+     *             @OA\Property(property="is_featured", type="boolean", example=true),
+     *             @OA\Property(property="variants", type="array", @OA\Items(
+     *                 @OA\Property(property="size_id", type="integer", example=1),
+     *                 @OA\Property(property="color_id", type="integer", example=1),
+     *                 @OA\Property(property="stock", type="integer", example=50),
+     *                 @OA\Property(property="price", type="number", example=2500000),
+     *                 @OA\Property(property="image", type="string", example=null)
+     *             ))
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Tạo thành công")
+     * )
+     */
     public function product_add(Request $request)
     {
         $request->validate([
@@ -425,7 +539,6 @@ class ProductApi extends Controller
             'images' => 'nullable|array',
         ]);
 
-        // Kiểm tra trùng lặp size_id và color_id trong các biến thể
         $seenCombinations = [];
         foreach ($request->variants as $variant) {
             $sizeId = $variant['size_id'] ?? null;
@@ -456,7 +569,7 @@ class ProductApi extends Controller
                 'status' => 1,
                 'sold' => 0,
             ]);
-            // tạo sku tự động p1
+
             $word = Str::slug($request->name, ' ');
             $words = explode(' ', $word);
             $productCode = '';
@@ -467,7 +580,6 @@ class ProductApi extends Controller
             }
 
             foreach ($request->variants as $variant) {
-                // tạo sku tự động p2
                 $colorCode = $variant['color_code'] ?? 'CLR'.$variant['color_id'];
                 $sizeCode = $variant['size_code'] ?? 'SZ'.$variant['size_id'];
                 $autoSku = strtoupper($productCode.'-'.$colorCode.'-'.$sizeCode.Str::random(4));
@@ -500,6 +612,29 @@ class ProductApi extends Controller
         }
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/product_edit/{id}",
+     *     summary="[Admin] Cập nhật thông tin sản phẩm & biến thể",
+     *     tags={"Quản lý Sản phẩm (Admin Product)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","category_id","brand_id","variants"},
+     *             @OA\Property(property="name", type="string"),
+     *             @OA\Property(property="category_id", type="integer"),
+     *             @OA\Property(property="brand_id", type="integer"),
+     *             @OA\Property(property="description", type="string"),
+     *             @OA\Property(property="images", type="array", @OA\Items(type="string")),
+     *             @OA\Property(property="is_featured", type="boolean"),
+     *             @OA\Property(property="variants", type="array", @OA\Items(type="object"))
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
+     */
     public function product_edit(Request $request, int $id)
     {
         $request->validate([
@@ -514,7 +649,6 @@ class ProductApi extends Controller
             return response()->json(['success' => false, 'message' => 'Không tìm thấy sản phẩm!'], 404);
         }
 
-        // Kiểm tra trùng lặp size_id và color_id trong các biến thể
         $seenCombinations = [];
         foreach ($request->variants as $variant) {
             $sizeId = $variant['size_id'] ?? null;
@@ -637,6 +771,24 @@ class ProductApi extends Controller
         }
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/upload",
+     *     summary="Tải ảnh sản phẩm lên server",
+     *     tags={"Quản lý Sản phẩm (Admin Product)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 @OA\Property(property="image", type="string", format="binary")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Tải lên thành công")
+     * )
+     */
     public function uploadImage(Request $request)
     {
         $request->validate([
@@ -672,6 +824,16 @@ class ProductApi extends Controller
         ], 400);
     }
 
+    /**
+     * @OA\Patch(
+     *     path="/api/product/toggle-featured/{id}",
+     *     summary="[Admin] Bật/tắt trạng thái nổi bật của sản phẩm",
+     *     tags={"Quản lý Sản phẩm (Admin Product)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
+     */
     public function toggleFeatured(int $id)
     {
         $product = ProductModel::find($id, ['*']);
@@ -690,6 +852,22 @@ class ProductApi extends Controller
         ], 200);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/product_import_excel",
+     *     summary="[Admin] Nhập hàng loạt sản phẩm từ Excel",
+     *     tags={"Quản lý Sản phẩm (Admin Product)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"products"},
+     *             @OA\Property(property="products", type="array", @OA\Items(type="object"))
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Nhập file Excel thành công")
+     * )
+     */
     public function importExcel(Request $request)
     {
         $request->validate([

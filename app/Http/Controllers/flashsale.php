@@ -11,7 +11,14 @@ use Illuminate\Support\Facades\DB;
 class flashsale extends Controller
 {
     /**
-     * Hiển thị và lọc danh sách flashsale.
+     * @OA\Get(
+     *     path="/api/flash-sale",
+     *     summary="[Admin] Danh sách và lọc các chiến dịch Flash Sale",
+     *     tags={"Quản lý Flash Sale"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="status", in="query", required=false, description="Trạng thái (1: Đang chạy, 2: Tạm dừng, 3: Kết thúc)", @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
     public function show(Request $request)
     {
@@ -49,7 +56,14 @@ class flashsale extends Controller
     }
 
     /**
-     * Xóa chiến dịch flashsale (Soft Delete).
+     * @OA\Delete(
+     *     path="/api/flash-sale/delete/{id}",
+     *     summary="[Admin] Xóa chiến dịch Flash Sale",
+     *     tags={"Quản lý Flash Sale"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xóa thành công")
+     * )
      */
     public function destroy(int $id)
     {
@@ -63,6 +77,27 @@ class flashsale extends Controller
         ], 200);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/flash-sale/add",
+     *     summary="[Admin] Tạo mới chiến dịch Flash Sale",
+     *     tags={"Quản lý Flash Sale"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","discount_value","quantity_limit"},
+     *             @OA\Property(property="name", type="string", example="Flash Sale Giờ Vàng"),
+     *             @OA\Property(property="start_time", type="string", example="2026-08-01 10:00"),
+     *             @OA\Property(property="end_time", type="string", example="2026-08-01 22:00"),
+     *             @OA\Property(property="discount_value", type="number", example=20),
+     *             @OA\Property(property="quantity_limit", type="integer", example=50),
+     *             @OA\Property(property="product_ids", type="array", @OA\Items(type="integer"))
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Tạo thành công")
+     * )
+     */
     function add(Request $request){
         $request->validate([
             'name'            => 'required|string|max:255',
@@ -137,7 +172,26 @@ class flashsale extends Controller
     }
 
     /**
-     * Cập nhật thông tin chiến dịch flashsale.
+     * @OA\Put(
+     *     path="/api/flash-sale/edit/{id}",
+     *     summary="[Admin] Cập nhật chiến dịch Flash Sale",
+     *     tags={"Quản lý Flash Sale"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","discount_value","quantity_limit"},
+     *             @OA\Property(property="name", type="string"),
+     *             @OA\Property(property="start_time", type="string"),
+     *             @OA\Property(property="end_time", type="string"),
+     *             @OA\Property(property="discount_value", type="number"),
+     *             @OA\Property(property="quantity_limit", type="integer"),
+     *             @OA\Property(property="product_ids", type="array", @OA\Items(type="integer"))
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
      */
     public function edit(Request $request, int $id)
     {
@@ -217,13 +271,19 @@ class flashsale extends Controller
     }
 
     /**
-     * Bật/tắt trạng thái hoạt động của flashsale.
+     * @OA\Patch(
+     *     path="/api/flash-sale/toggle-cate/{id}",
+     *     summary="[Admin] Bật/Tắt trạng thái chiến dịch Flash Sale",
+     *     tags={"Quản lý Flash Sale"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
      */
     public function togglecate(int $id)
     {
         $flash = flash::findOrFail($id);
 
-        // Không cho phép thay đổi trạng thái nếu chiến dịch đã kết thúc
         if ($flash->status == 3) {
             return response()->json([
                 'success' => false,
@@ -237,7 +297,14 @@ class flashsale extends Controller
     }
 
     /**
-     * Kết thúc chiến dịch flashsale.
+     * @OA\Patch(
+     *     path="/api/flash-sale/end-camp/{id}",
+     *     summary="[Admin] Kết thúc chiến dịch Flash Sale",
+     *     tags={"Quản lý Flash Sale"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Đã kết thúc chiến dịch")
+     * )
      */
     public function endcamp(int $id)
     {

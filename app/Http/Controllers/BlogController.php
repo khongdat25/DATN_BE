@@ -10,26 +10,30 @@ use Illuminate\Support\Str;
 class BlogController extends Controller
 {
     /**
-     * Lấy danh sách tin tức.
+     * @OA\Get(
+     *     path="/api/blogs",
+     *     summary="Danh sách bài viết tin tức (Công khai)",
+     *     tags={"Tin tức (Blogs)"},
+     *     @OA\Parameter(name="featuring", in="query", required=false, description="Lọc bài viết nổi bật (true/false)", @OA\Schema(type="boolean")),
+     *     @OA\Parameter(name="search", in="query", required=false, description="Tìm kiếm theo tiêu đề", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="limit", in="query", required=false, description="Số lượng bài viết trên 1 trang", @OA\Schema(type="integer", default=10)),
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
     public function index(Request $request)
     {
         $query = Blogs::query();
 
-        // Lọc theo tin nổi bật
         if ($request->has('featuring')) {
             $query->where('featuring', filter_var($request->input('featuring'), FILTER_VALIDATE_BOOLEAN));
         }
 
-        // Tìm kiếm theo tiêu đề
         if ($request->filled('search')) {
             $query->where('name', 'like', '%'.$request->input('search').'%');
         }
 
-        // Sắp xếp bài viết mới nhất lên đầu
         $query->orderBy('created_at', 'desc');
 
-        // Phân trang mặc định là 10 bài viết
         $limit = $request->input('limit', 10);
         $blogs = $query->paginate($limit);
 
@@ -41,7 +45,13 @@ class BlogController extends Controller
     }
 
     /**
-     * Admin: Lấy danh sách toàn bộ tin tức.
+     * @OA\Get(
+     *     path="/api/admin/blogs",
+     *     summary="[Admin] Danh sách toàn bộ bài viết tin tức",
+     *     tags={"Tin tức (Blogs)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
     public function adminIndex()
     {
@@ -57,7 +67,14 @@ class BlogController extends Controller
     }
 
     /**
-     * Xem chi tiết một bài viết bằng ID hoặc Slug.
+     * @OA\Get(
+     *     path="/api/blogs/{slugOrId}",
+     *     summary="Chi tiết bài viết tin tức",
+     *     tags={"Tin tức (Blogs)"},
+     *     @OA\Parameter(name="slugOrId", in="path", required=true, description="ID hoặc Slug bài viết", @OA\Schema(type="string")),
+     *     @OA\Response(response=200, description="Thành công"),
+     *     @OA\Response(response=404, description="Không tìm thấy")
+     * )
      */
     public function show(string|int $slugOrId)
     {
@@ -73,7 +90,6 @@ class BlogController extends Controller
             ], 404);
         }
 
-        // Tăng lượt xem
         $blog->increment('views');
 
         return response()->json([
@@ -84,7 +100,24 @@ class BlogController extends Controller
     }
 
     /**
-     * Admin: Thêm mới tin tức.
+     * @OA\Post(
+     *     path="/api/admin/blogs",
+     *     summary="[Admin] Thêm bài viết tin tức mới",
+     *     tags={"Tin tức (Blogs)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","content"},
+     *             @OA\Property(property="name", type="string", example="Xu hướng Sneaker 2026"),
+     *             @OA\Property(property="avatar", type="string", example="blog1.jpg"),
+     *             @OA\Property(property="comment", type="string", example="Mô tả ngắn"),
+     *             @OA\Property(property="content", type="string", example="Nội dung bài viết chi tiết..."),
+     *             @OA\Property(property="featuring", type="boolean", example=true)
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Tạo thành công")
+     * )
      */
     public function store(Request $request)
     {
@@ -125,7 +158,23 @@ class BlogController extends Controller
     }
 
     /**
-     * Admin: Cập nhật tin tức.
+     * @OA\Post(
+     *     path="/api/admin/blogs/{id}",
+     *     summary="[Admin] Cập nhật bài viết tin tức",
+     *     tags={"Tin tức (Blogs)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string"),
+     *             @OA\Property(property="avatar", type="string"),
+     *             @OA\Property(property="comment", type="string"),
+     *             @OA\Property(property="content", type="string"),
+     *             @OA\Property(property="featuring", type="boolean")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
      */
     public function update(Request $request, string|int $id)
     {
@@ -172,7 +221,14 @@ class BlogController extends Controller
     }
 
     /**
-     * Admin: Xóa tin tức (Soft Delete).
+     * @OA\Delete(
+     *     path="/api/admin/blogs/{id}",
+     *     summary="[Admin] Xóa bài viết tin tức",
+     *     tags={"Tin tức (Blogs)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xóa thành công")
+     * )
      */
     public function destroy(string|int $id)
     {

@@ -9,7 +9,22 @@ use Illuminate\Http\Request;
 class RatingController extends Controller
 {
     /**
-     * Gửi đánh giá cho một sản phẩm trong đơn hàng đã giao
+     * @OA\Post(
+     *     path="/api/ratings",
+     *     summary="Gửi đánh giá sản phẩm",
+     *     tags={"Đánh giá sản phẩm (Rating)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"order_item_id","rating"},
+     *             @OA\Property(property="order_item_id", type="integer", example=1),
+     *             @OA\Property(property="rating", type="integer", minimum=1, maximum=5, example=5),
+     *             @OA\Property(property="comment", type="string", example="Giày đi rất êm chân, giao hàng nhanh!")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Gửi đánh giá thành công")
+     * )
      */
     public function store(Request $request)
     {
@@ -30,7 +45,6 @@ class RatingController extends Controller
             ], 404);
         }
 
-        // Kiểm tra quyền sở hữu đơn hàng của người dùng
         if ($orderItem->order->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
@@ -38,7 +52,6 @@ class RatingController extends Controller
             ], 403);
         }
 
-        // Kiểm tra trạng thái đơn hàng (Phải ở trạng thái đã giao hàng 'delivered')
         if ($orderItem->order->status !== 'delivered') {
             return response()->json([
                 'success' => false,
@@ -46,7 +59,6 @@ class RatingController extends Controller
             ], 400);
         }
 
-        // Kiểm tra xem đã đánh giá sản phẩm này trong đơn hàng này chưa
         $existingRating = rating::where('order_item_id', '=', $orderItem->id, 'and')->first();
 
         if ($existingRating) {
@@ -81,7 +93,16 @@ class RatingController extends Controller
     }
 
     /**
-     * Danh sách đánh giá dành cho Admin
+     * @OA\Get(
+     *     path="/api/admin/reviews",
+     *     summary="[Admin] Danh sách đánh giá của khách hàng",
+     *     tags={"Đánh giá sản phẩm (Rating)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="rating", in="query", required=false, description="Số sao (1-5 hoặc all)", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="status", in="query", required=false, description="Trạng thái (pending/replied/hidden/all)", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="q", in="query", required=false, description="Tìm theo tên/email/nội dung", @OA\Schema(type="string")),
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
     public function adminIndex(Request $request)
     {
@@ -166,7 +187,21 @@ class RatingController extends Controller
     }
 
     /**
-     * Admin phản hồi đánh giá của khách hàng
+     * @OA\Post(
+     *     path="/api/admin/reviews/{id}/reply",
+     *     summary="[Admin] Phản hồi đánh giá",
+     *     tags={"Đánh giá sản phẩm (Rating)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"reply"},
+     *             @OA\Property(property="reply", type="string", example="Cảm ơn bạn đã tin tưởng SaigonShoes!")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Phản hồi thành công")
+     * )
      */
     public function adminReply(Request $request, int $id)
     {
@@ -174,7 +209,7 @@ class RatingController extends Controller
             'reply' => 'required|string|max:1000',
         ]);
 
-        $ratingObj = rating::find($id);
+        $ratingObj = rating::find($id, ['*']);
         if (! $ratingObj) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đánh giá'], 404);
         }
@@ -192,7 +227,21 @@ class RatingController extends Controller
     }
 
     /**
-     * Admin chuyển trạng thái hiển thị / ẩn bình luận
+     * @OA\Put(
+     *     path="/api/admin/reviews/{id}/status",
+     *     summary="[Admin] Cập nhật trạng thái hiển thị/ẩn đánh giá",
+     *     tags={"Đánh giá sản phẩm (Rating)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"status"},
+     *             @OA\Property(property="status", type="string", enum={"pending","replied","hidden"})
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
      */
     public function adminUpdateStatus(Request $request, int $id)
     {
@@ -200,7 +249,7 @@ class RatingController extends Controller
             'status' => 'required|string|in:pending,replied,hidden',
         ]);
 
-        $ratingObj = rating::find($id);
+        $ratingObj = rating::find($id, ['*']);
         if (! $ratingObj) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đánh giá'], 404);
         }
@@ -217,11 +266,18 @@ class RatingController extends Controller
     }
 
     /**
-     * Admin xóa đánh giá
+     * @OA\Delete(
+     *     path="/api/admin/reviews/{id}",
+     *     summary="[Admin] Xóa đánh giá",
+     *     tags={"Đánh giá sản phẩm (Rating)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xóa thành công")
+     * )
      */
     public function adminDestroy(int $id)
     {
-        $ratingObj = rating::find($id);
+        $ratingObj = rating::find($id, ['*']);
         if (! $ratingObj) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đánh giá'], 404);
         }

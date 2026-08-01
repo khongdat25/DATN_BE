@@ -9,7 +9,13 @@ use Illuminate\Support\Facades\Validator;
 class AddressController extends Controller
 {
     /**
-     * Lấy danh sách địa chỉ của người dùng.
+     * @OA\Get(
+     *     path="/api/addresses",
+     *     summary="Danh sách địa chỉ giao hàng của tôi",
+     *     tags={"Địa chỉ (Address)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
     public function index(Request $request)
     {
@@ -21,7 +27,6 @@ class AddressController extends Controller
             ], 401);
         }
 
-        // Ưu tiên hiển thị địa chỉ mặc định lên đầu
         $addresses = $user->addresses()
             ->orderBy('is_default', 'desc')
             ->orderBy('created_at', 'desc')
@@ -34,7 +39,24 @@ class AddressController extends Controller
     }
 
     /**
-     * Thêm mới địa chỉ nhận hàng.
+     * @OA\Post(
+     *     path="/api/addresses",
+     *     summary="Thêm mới địa chỉ giao hàng",
+     *     tags={"Địa chỉ (Address)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","phone","address","badge"},
+     *             @OA\Property(property="name", type="string", example="Nguyễn Văn A"),
+     *             @OA\Property(property="phone", type="string", example="0987654321"),
+     *             @OA\Property(property="address", type="string", example="123 Lê Lợi, Q.1, TP.HCM"),
+     *             @OA\Property(property="badge", type="string", example="Nhà riêng"),
+     *             @OA\Property(property="is_default", type="boolean", example=true)
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Thêm thành công")
+     * )
      */
     public function store(Request $request)
     {
@@ -70,7 +92,6 @@ class AddressController extends Controller
         $hasNoAddress = $user->addresses()->count() === 0;
         $isDefault = $hasNoAddress ? true : ((bool) $request->input('is_default', false) || $request->input('badge') === 'Mặc định');
 
-        // Nếu đánh dấu mặc định, gỡ mặc định các địa chỉ khác
         if ($isDefault) {
             $user->addresses()->update(['is_default' => false]);
         }
@@ -91,9 +112,27 @@ class AddressController extends Controller
     }
 
     /**
-     * Cập nhật địa chỉ nhận hàng.
+     * @OA\Put(
+     *     path="/api/addresses/{id}",
+     *     summary="Cập nhật địa chỉ giao hàng",
+     *     tags={"Địa chỉ (Address)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","phone","address","badge"},
+     *             @OA\Property(property="name", type="string"),
+     *             @OA\Property(property="phone", type="string"),
+     *             @OA\Property(property="address", type="string"),
+     *             @OA\Property(property="badge", type="string"),
+     *             @OA\Property(property="is_default", type="boolean")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         $user = auth('api')->user();
         if (! $user) {
@@ -134,18 +173,14 @@ class AddressController extends Controller
 
         $isDefault = (bool) $request->input('is_default', false) || $request->input('badge') === 'Mặc định';
 
-        // Xử lý đổi trạng thái mặc định của địa chỉ này
         if ($isDefault) {
             $user->addresses()->where('id', '!=', $id)->update(['is_default' => false]);
         } else {
-            // Nếu địa chỉ này đang là mặc định nhưng bị sửa thành không mặc định
             if ($address->is_default) {
-                // Thử tìm địa chỉ khác thay thế làm mặc định
                 $anotherAddress = $user->addresses()->where('id', '!=', $id)->first();
                 if ($anotherAddress) {
                     $anotherAddress->update(['is_default' => true]);
                 } else {
-                    // Nếu là địa chỉ duy nhất, bắt buộc phải là mặc định
                     $isDefault = true;
                 }
             }
@@ -167,9 +202,16 @@ class AddressController extends Controller
     }
 
     /**
-     * Xóa địa chỉ nhận hàng.
+     * @OA\Delete(
+     *     path="/api/addresses/{id}",
+     *     summary="Xóa địa chỉ giao hàng",
+     *     tags={"Địa chỉ (Address)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xóa thành công")
+     * )
      */
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $user = auth('api')->user();
         if (! $user) {
@@ -190,7 +232,6 @@ class AddressController extends Controller
         $wasDefault = $address->is_default;
         $address->delete();
 
-        // Nếu địa chỉ bị xóa đang là mặc định, tự động đặt địa chỉ còn lại làm mặc định
         if ($wasDefault) {
             $nextDefault = $user->addresses()->first();
             if ($nextDefault) {

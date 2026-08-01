@@ -12,10 +12,14 @@ use Illuminate\Support\Facades\DB;
 class DashboardController extends Controller
 {
     /**
-     * Lấy dữ liệu thống kê cho trang Dashboard của Admin.
-     * Đơn hàng được tính là ĐƠN HOÀN THÀNH khi:
-     * 1. Đã thanh toán (payment_status: paid, đã thanh toán, thành công, 1)
-     * 2. Đã giao hàng hoàn thành (status: delivered, completed, đã giao hàng, đã giao thành công, hoàn thành).
+     * @OA\Get(
+     *     path="/api/admin/dashboard-stats",
+     *     summary="[Admin] Lấy dữ liệu thống kê tổng quan (Dashboard)",
+     *     description="Thống kê tổng doanh thu, số đơn hàng hoàn thành, khách hàng, sản phẩm, top bán chạy và biểu đồ doanh thu",
+     *     tags={"Dashboard Admin"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
     public function stats(Request $request)
     {

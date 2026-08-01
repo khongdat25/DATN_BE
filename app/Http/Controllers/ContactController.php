@@ -9,7 +9,23 @@ use Illuminate\Support\Facades\Validator;
 class ContactController extends Controller
 {
     /**
-     * Gửi liên hệ mới (Public).
+     * @OA\Post(
+     *     path="/api/contacts",
+     *     summary="Gửi thông tin liên hệ (Công khai)",
+     *     tags={"Liên hệ (Contact)"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","email","message"},
+     *             @OA\Property(property="name", type="string", example="Nguyễn Văn A"),
+     *             @OA\Property(property="email", type="string", example="nguyenvana@gmail.com"),
+     *             @OA\Property(property="phone", type="string", example="0987654321"),
+     *             @OA\Property(property="subject", type="string", example="Cần hỗ trợ đơn hàng"),
+     *             @OA\Property(property="message", type="string", example="Tôi cần tư vấn thêm về đổi trả...")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Gửi thành công")
+     * )
      */
     public function store(Request $request)
     {
@@ -40,7 +56,7 @@ class ContactController extends Controller
             'phone' => $request->phone,
             'subject' => $request->subject,
             'message' => $request->message,
-            'status' => 'pending', // mặc định là chờ xử lý
+            'status' => 'pending',
         ]);
 
         return response()->json([
@@ -51,18 +67,25 @@ class ContactController extends Controller
     }
 
     /**
-     * Admin: Lấy danh sách liên hệ.
+     * @OA\Get(
+     *     path="/api/admin/contacts",
+     *     summary="[Admin] Danh sách tin nhắn liên hệ",
+     *     tags={"Liên hệ (Contact)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="status", in="query", required=false, description="Trạng thái (pending/processed)", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="search", in="query", required=false, description="Tìm theo tên/email/chủ đề", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="limit", in="query", required=false, @OA\Schema(type="integer", default=15)),
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
     public function index(Request $request)
     {
         $query = Contact::query();
 
-        // Lọc theo trạng thái
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
         }
 
-        // Tìm kiếm theo tên hoặc email
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
@@ -85,9 +108,16 @@ class ContactController extends Controller
     }
 
     /**
-     * Admin: Chi tiết một liên hệ.
+     * @OA\Get(
+     *     path="/api/admin/contacts/{id}",
+     *     summary="[Admin] Chi tiết tin nhắn liên hệ",
+     *     tags={"Liên hệ (Contact)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
-    public function show($id)
+    public function show(int $id)
     {
         $contact = Contact::find($id);
 
@@ -106,9 +136,24 @@ class ContactController extends Controller
     }
 
     /**
-     * Admin: Cập nhật trạng thái xử lý liên hệ.
+     * @OA\Put(
+     *     path="/api/admin/contacts/{id}",
+     *     summary="[Admin] Phản hồi & Cập nhật trạng thái liên hệ",
+     *     tags={"Liên hệ (Contact)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"status"},
+     *             @OA\Property(property="status", type="string", example="processed"),
+     *             @OA\Property(property="reply_content", type="string", example="Chào bạn, SaigonShoes đã xử lý...")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         $contact = Contact::find($id);
 
@@ -157,9 +202,16 @@ class ContactController extends Controller
     }
 
     /**
-     * Admin: Xóa thông tin liên hệ.
+     * @OA\Delete(
+     *     path="/api/admin/contacts/{id}",
+     *     summary="[Admin] Xóa tin nhắn liên hệ",
+     *     tags={"Liên hệ (Contact)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xóa thành công")
+     * )
      */
-    public function destroy($id)
+    public function destroy(int $id)
     {
         $contact = Contact::find($id);
 

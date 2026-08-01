@@ -7,7 +7,18 @@ use Illuminate\Http\Request;
 
 class BannerController extends Controller
 {
-    // API cho Admin: Lấy tất cả Banner kèm bộ lọc
+    /**
+     * @OA\Get(
+     *     path="/api/admin/banners",
+     *     summary="[Admin] Danh sách tất cả Banners",
+     *     description="Lấy danh sách Banners phục vụ quản trị, hỗ trợ lọc theo trạng thái và tìm kiếm",
+     *     tags={"Quản lý Banner (Admin)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="search", in="query", required=false, description="Từ khóa tìm kiếm tiêu đề, vị trí, liên kết", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="status", in="query", required=false, description="Trạng thái (active/expired/all)", @OA\Schema(type="string")),
+     *     @OA\Response(response=200, description="Thành công", @OA\JsonContent(@OA\Property(property="success", type="boolean", example=true), @OA\Property(property="data", type="array", @OA\Items(type="object"))))
+     * )
+     */
     public function adminIndex(Request $request)
     {
         $query = Banners::query();
@@ -33,7 +44,15 @@ class BannerController extends Controller
         ], 200);
     }
 
-    // API cho FE Công khai: Lấy Banner đang hiển thị
+    /**
+     * @OA\Get(
+     *     path="/api/banner",
+     *     summary="Lấy danh sách Banner đang hiển thị (Công khai)",
+     *     description="Trả về danh sách Banner có trạng thái active để hiển thị trên trang chủ",
+     *     tags={"Quản lý Banner (Admin)"},
+     *     @OA\Response(response=200, description="Thành công", @OA\JsonContent(@OA\Property(property="success", type="boolean", example=true), @OA\Property(property="data", type="array", @OA\Items(type="object"))))
+     * )
+     */
     public function publicIndex()
     {
         $banners = Banners::query()
@@ -47,7 +66,28 @@ class BannerController extends Controller
         ], 200);
     }
 
-    // API Admin: Thêm Banner mới
+    /**
+     * @OA\Post(
+     *     path="/api/admin/banners",
+     *     summary="[Admin] Tạo Banner mới",
+     *     tags={"Quản lý Banner (Admin)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"title","image"},
+     *             @OA\Property(property="title", type="string", example="Khuyến mãi Mùa Hè"),
+     *             @OA\Property(property="image", type="string", example="banner_summer.jpg"),
+     *             @OA\Property(property="position", type="string", example="Trang chủ - Slider chính (Hero)"),
+     *             @OA\Property(property="link", type="string", example="/products"),
+     *             @OA\Property(property="start_date", type="string", format="date", example="2026-08-01"),
+     *             @OA\Property(property="end_date", type="string", format="date", example="2026-09-01"),
+     *             @OA\Property(property="status", type="string", example="active")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Tạo thành công", @OA\JsonContent(@OA\Property(property="success", type="boolean", example=true), @OA\Property(property="message", type="string", example="Tạo banner mới thành công!")))
+     * )
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -78,7 +118,27 @@ class BannerController extends Controller
         ], 201);
     }
 
-    // API Admin: Cập nhật Banner
+    /**
+     * @OA\Put(
+     *     path="/api/admin/banners/{id}",
+     *     summary="[Admin] Cập nhật thông tin Banner",
+     *     tags={"Quản lý Banner (Admin)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         @OA\JsonContent(
+     *             @OA\Property(property="title", type="string"),
+     *             @OA\Property(property="image", type="string"),
+     *             @OA\Property(property="position", type="string"),
+     *             @OA\Property(property="link", type="string"),
+     *             @OA\Property(property="start_date", type="string", format="date"),
+     *             @OA\Property(property="end_date", type="string", format="date"),
+     *             @OA\Property(property="status", type="string")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
+     */
     public function update(Request $request, int $id)
     {
         $banner = Banners::find($id, ['*']);
@@ -104,7 +164,16 @@ class BannerController extends Controller
         ], 200);
     }
 
-    // API Admin: Bật/Tắt Trạng thái
+    /**
+     * @OA\Patch(
+     *     path="/api/admin/banners/{id}/toggle",
+     *     summary="[Admin] Bật/Tắt trạng thái Banner",
+     *     tags={"Quản lý Banner (Admin)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Cập nhật trạng thái thành công")
+     * )
+     */
     public function toggleStatus(int $id)
     {
         $banner = Banners::find($id, ['*']);
@@ -123,7 +192,16 @@ class BannerController extends Controller
         ], 200);
     }
 
-    // API Admin: Xóa Banner
+    /**
+     * @OA\Delete(
+     *     path="/api/admin/banners/{id}",
+     *     summary="[Admin] Xóa Banner",
+     *     tags={"Quản lý Banner (Admin)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xóa thành công")
+     * )
+     */
     public function destroy(int $id)
     {
         $banner = Banners::find($id, ['*']);

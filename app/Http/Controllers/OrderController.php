@@ -12,7 +12,13 @@ use Illuminate\Support\Facades\DB;
 class OrderController extends Controller
 {
     /**
-     * Lấy danh sách tất cả các đơn hàng (Quản trị viên)
+     * @OA\Get(
+     *     path="/api/admin/orders",
+     *     summary="[Admin] Danh sách tất cả đơn hàng",
+     *     tags={"Đơn hàng (Order)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
     public function adminIndex()
     {
@@ -37,7 +43,22 @@ class OrderController extends Controller
     }
 
     /**
-     * Cập nhật trạng thái đơn hàng (Quản trị viên)
+     * @OA\Post(
+     *     path="/api/admin/orders/{id}/status",
+     *     summary="[Admin] Cập nhật trạng thái đơn hàng",
+     *     tags={"Đơn hàng (Order)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"status"},
+     *             @OA\Property(property="status", type="string", enum={"new","pending","shipping","delivered","cancelled"}),
+     *             @OA\Property(property="payment_status", type="string", enum={"pending","paid","refunded"})
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
      */
     public function adminUpdateStatus(Request $request, int $id)
     {
@@ -50,14 +71,13 @@ class OrderController extends Controller
 
         $oldStatus = $order->status;
 
-        // Tránh cho phép thay đổi ngược (lùi trạng thái) hoặc thay đổi khi đã ở trạng thái kết thúc
         if ($oldStatus !== $request->status) {
             $allowedTransitions = [
                 'new' => ['pending', 'shipping', 'delivered', 'cancelled'],
                 'pending' => ['shipping', 'delivered', 'cancelled'],
                 'shipping' => ['delivered', 'cancelled'],
-                'delivered' => [], // Trạng thái kết thúc
-                'cancelled' => [], // Trạng thái kết thúc
+                'delivered' => [],
+                'cancelled' => [],
             ];
 
             $statusLabels = [
@@ -89,7 +109,6 @@ class OrderController extends Controller
         try {
             $order->save();
 
-            // Nếu chuyển sang trạng thái cancelled và trước đó chưa cancelled
             if ($request->status === 'cancelled' && $oldStatus !== 'cancelled') {
                 if ($order->voucher_id) {
                     $voucher = \App\Models\Voucher::find($order->voucher_id, ['*']);
@@ -98,7 +117,6 @@ class OrderController extends Controller
                     }
                 }
 
-                // Hoàn trả lại số lượng tồn kho (stock) cho các variant trong đơn hàng khi admin hủy đơn
                 $orderItems = OrderItem::query()->where('order_id', '=', $order->id, 'and')->get();
                 foreach ($orderItems as $item) {
                     $variant = Variant::find($item->variant_id, ['*']);
@@ -128,7 +146,14 @@ class OrderController extends Controller
     }
 
     /**
-     * Xóa đơn hàng (Quản trị viên)
+     * @OA\Delete(
+     *     path="/api/admin/orders/{id}",
+     *     summary="[Admin] Xóa đơn hàng",
+     *     tags={"Đơn hàng (Order)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xóa thành công")
+     * )
      */
     public function adminDestroy(int $id)
     {
@@ -136,7 +161,6 @@ class OrderController extends Controller
 
         DB::beginTransaction();
         try {
-            // Khôi phục lượt dùng voucher nếu đơn hàng chưa bị cancelled trước đó
             if ($order->status !== 'cancelled' && $order->voucher_id) {
                 $voucher = \App\Models\Voucher::find($order->voucher_id, ['*']);
                 if ($voucher) {
@@ -144,7 +168,6 @@ class OrderController extends Controller
                 }
             }
 
-            // Xóa tất cả các items thuộc đơn hàng trước
             $order->items()->delete();
             $order->delete();
 
@@ -166,7 +189,13 @@ class OrderController extends Controller
     }
 
     /**
-     * Lấy danh sách đơn mua của người dùng hiện tại
+     * @OA\Get(
+     *     path="/api/user/orders",
+     *     summary="Danh sách đơn mua của tôi",
+     *     tags={"Đơn hàng (Order)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
     public function userIndex(Request $request)
     {
@@ -193,14 +222,26 @@ class OrderController extends Controller
     }
 
     /**
-     * Hủy đơn hàng (Người dùng tự hủy)
+     * @OA\Post(
+     *     path="/api/user/orders/{id}/cancel",
+     *     summary="Hủy đơn hàng của tôi",
+     *     tags={"Đơn hàng (Order)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         @OA\JsonContent(
+     *             @OA\Property(property="reason", type="string", example="Đổi ý không muốn mua nữa"),
+     *             @OA\Property(property="restore_cart", type="boolean", example=false)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Hủy thành công")
+     * )
      */
     public function userCancel(Request $request, int $id)
     {
         $user = $request->user();
         $order = Order::query()->where('id', '=', $id, 'and')->where('user_id', '=', $user->id, 'and')->firstOrFail();
 
-        // Chỉ cho phép hủy khi đơn ở trạng thái mới hoặc chờ xử lý
         if (! in_array($order->status, ['new', 'pending'])) {
             return response()->json([
                 'success' => false,
@@ -233,7 +274,6 @@ class OrderController extends Controller
 
             $order->save();
 
-            // Khôi phục lượt dùng voucher
             if ($order->voucher_id) {
                 $voucher = \App\Models\Voucher::find($order->voucher_id, ['*']);
                 if ($voucher) {
@@ -241,7 +281,6 @@ class OrderController extends Controller
                 }
             }
 
-            // Hoàn trả lại số lượng tồn kho (stock) cho các variant trong đơn hàng
             $orderItems = OrderItem::query()->where('order_id', '=', $order->id, 'and')->get();
             foreach ($orderItems as $item) {
                 $variant = Variant::find($item->variant_id, ['*']);
@@ -251,7 +290,6 @@ class OrderController extends Controller
                 }
             }
 
-            // Khôi phục lại giỏ hàng cho user nếu có yêu cầu (vd: hủy khi đang ở trang thanh toán QR)
             if ($request->boolean('restore_cart')) {
                 foreach ($orderItems as $item) {
                     $existingCart = Cart::where('user_id', '=', $user->id, 'and')
@@ -289,7 +327,14 @@ class OrderController extends Controller
     }
 
     /**
-     * Xác nhận thanh toán thành công cho đơn hàng (khi redirect từ cổng thanh toán)
+     * @OA\Post(
+     *     path="/api/user/orders/{id}/confirm-payment",
+     *     summary="Xác nhận thanh toán đơn hàng",
+     *     tags={"Đơn hàng (Order)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xác nhận thành công")
+     * )
      */
     public function userConfirmPayment(Request $request, int $id)
     {
@@ -310,7 +355,14 @@ class OrderController extends Controller
     }
 
     /**
-     * Lấy thông tin chi tiết một đơn hàng của người dùng hiện tại
+     * @OA\Get(
+     *     path="/api/user/orders/{id}",
+     *     summary="Chi tiết một đơn hàng của tôi",
+     *     tags={"Đơn hàng (Order)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
     public function userShow(Request $request, int $id)
     {
@@ -336,14 +388,20 @@ class OrderController extends Controller
     }
 
     /**
-     * Xóa/Hủy vĩnh viễn đơn hàng chưa thanh toán và khôi phục giỏ hàng
+     * @OA\Delete(
+     *     path="/api/user/orders/{id}",
+     *     summary="Hủy và khôi phục giỏ hàng cho đơn chưa thanh toán",
+     *     tags={"Đơn hàng (Order)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xóa thành công")
+     * )
      */
     public function userDestroy(Request $request, int $id)
     {
         $user = $request->user();
         $order = Order::query()->where('id', '=', $id, 'and')->where('user_id', '=', $user->id, 'and')->firstOrFail();
 
-        // Chỉ cho phép xóa khi đơn hàng ở trạng thái 'pending'
         if ($order->status !== 'pending') {
             return response()->json([
                 'success' => false,
@@ -353,7 +411,6 @@ class OrderController extends Controller
 
         DB::beginTransaction();
         try {
-            // Khôi phục lượt dùng voucher
             if ($order->voucher_id) {
                 $voucher = \App\Models\Voucher::find($order->voucher_id, ['*']);
                 if ($voucher) {
@@ -363,7 +420,6 @@ class OrderController extends Controller
 
             $orderItems = OrderItem::query()->where('order_id', '=', $order->id, 'and')->get();
 
-            // 1. Hoàn trả lại số lượng tồn kho (stock) cho các variant
             foreach ($orderItems as $item) {
                 $variant = Variant::find($item->variant_id, ['*']);
                 if ($variant && isset($variant->stock)) {
@@ -372,7 +428,6 @@ class OrderController extends Controller
                 }
             }
 
-            // 2. Khôi phục lại giỏ hàng cho user
             foreach ($orderItems as $item) {
                 $existingCart = Cart::where('user_id', '=', $user->id, 'and')
                     ->where('variant_id', '=', $item->variant_id, 'and')
@@ -389,7 +444,6 @@ class OrderController extends Controller
                 }
             }
 
-            // 3. Xóa items và xóa đơn hàng
             $order->items()->delete();
             $order->delete();
 

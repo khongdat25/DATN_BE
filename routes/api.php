@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AIChatController;
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -49,6 +50,7 @@ Route::get('/bestsellings', [ProductApi::class, 'BestSelling']);
 Route::get('/hotproducts', [ProductApi::class, 'HotProduct']);
 Route::get('/product/{slug}', [ProductApi::class, 'Detail']);
 Route::get('/search', [ProductApi::class, 'Search']);
+Route::post('/ai/chat', [AIChatController::class, 'chat']);
 
 // Tin tức (Blogs)
 Route::get('/blogs', [BlogController::class, 'index']);

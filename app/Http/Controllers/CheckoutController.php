@@ -12,6 +12,34 @@ use PayOS\PayOS;
 
 class CheckoutController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/api/checkout",
+     *     summary="Tạo đơn hàng & Thanh toán (Checkout)",
+     *     description="Tạo đơn hàng từ giỏ hàng hoặc mua ngay, tích hợp cổng thanh toán PayOS nếu chọn thanh toán QR",
+     *     tags={"Thanh toán (Checkout)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","phone","address"},
+     *             @OA\Property(property="name", type="string", example="Nguyễn Văn A"),
+     *             @OA\Property(property="email", type="string", example="nguyenvana@gmail.com"),
+     *             @OA\Property(property="phone", type="string", example="0987654321"),
+     *             @OA\Property(property="address", type="string", example="123 Nguyễn Huệ, Q.1, TP.HCM"),
+     *             @OA\Property(property="note", type="string", example="Giao buổi chiều"),
+     *             @OA\Property(property="payment_method_id", type="integer", example=1, description="1: COD, 2: PayOS QR"),
+     *             @OA\Property(property="voucher_id", type="integer", example=null),
+     *             @OA\Property(property="shipping_fee", type="number", example=30000),
+     *             @OA\Property(property="variant_id", type="integer", example=null, description="Nếu Mua Ngay"),
+     *             @OA\Property(property="quantity", type="integer", example=null, description="Số lượng Mua Ngay"),
+     *             @OA\Property(property="cart_item_ids", type="array", @OA\Items(type="integer"))
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Tạo đơn hàng thành công", @OA\JsonContent(@OA\Property(property="data", type="object"), @OA\Property(property="checkout_url", type="string"))),
+     *     @OA\Response(response=400, description="Lỗi dữ liệu / Tồn kho không đủ")
+     * )
+     */
     public function store(Request $request)
     {
         $user = $request->user();
@@ -70,7 +98,6 @@ class CheckoutController extends Controller
 
             $appliedVoucherId = null;
 
-            // Apply voucher discount if any
             if (! empty($data['voucher_id'])) {
                 $voucher = \App\Models\Voucher::where('id', '=', $data['voucher_id'], 'and')
                     ->lockForUpdate()
@@ -113,7 +140,6 @@ class CheckoutController extends Controller
                     return response()->json(['message' => 'Mã giảm giá đã hết lượt sử dụng'], 400);
                 }
 
-                // Check if user has already used this voucher
                 $alreadyUsed = Order::where('user_id', '=', $user->id, 'and')
                     ->where('voucher_id', '=', $voucher->id, 'and')
                     ->where('status', '!=', 'cancelled', 'and')
@@ -158,7 +184,6 @@ class CheckoutController extends Controller
 
             $isQrPayment = ($data['payment_method_id'] == 2 || $data['payment_method_id'] == 3);
 
-            // Set initial order status: 'pending' (Chờ xác nhận) if QR + PayOS enabled, else 'new' (Đang chờ duyệt)
             $order = Order::create([
                 'user_id' => $user->id,
                 'name' => $data['name'] ?? $user->name,
@@ -204,14 +229,12 @@ class CheckoutController extends Controller
                     'price' => $price,
                 ]);
 
-                // decrement stock if available
                 if (isset($variant->stock)) {
                     $variant->stock = max(0, $variant->stock - $item->quantity);
                     $variant->save();
                 }
             }
 
-            // Check if PayOS API is reachable (to prevent timeouts if server is offline or cURL fails)
             $isPayOsReachable = false;
             if ($isQrPayment && $clientId && $apiKey && $checksumKey) {
                 $connection = @fsockopen('api-merchant.payos.vn', 443, $errno, $errstr, 1.5);
@@ -223,7 +246,6 @@ class CheckoutController extends Controller
                 }
             }
 
-            // Create PayOS payment link if keys are configured and reachable
             $payOSResponse = null;
             if ($isQrPayment && $clientId && $apiKey && $checksumKey && $isPayOsReachable) {
                 try {
@@ -241,17 +263,14 @@ class CheckoutController extends Controller
                     $payOSResponse = $payOS->createPaymentLink($paymentData);
                 } catch (\Exception $payOSError) {
                     \Illuminate\Support\Facades\Log::warning('PayOS Link Creation Failed: '.$payOSError->getMessage());
-                    // Fallback to active order status
                     $order->status = 'new';
                     $order->save();
                 }
             } elseif ($isQrPayment) {
-                // If QR payment but PayOS not reachable, mark order as new (COD-like behavior)
                 $order->status = 'new';
                 $order->save();
             }
 
-            // clear cart only if this is NOT a buy-now checkout
             if (! $isBuyNow) {
                 $deleteQuery = Cart::query()->where(['user_id' => $user->id]);
                 if (! empty($data['cart_item_ids'])) {
@@ -277,7 +296,12 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Webhook xử lý phản hồi thanh toán thành công từ PayOS
+     * @OA\Post(
+     *     path="/api/payment/payos-webhook",
+     *     summary="Webhook xử lý kết quả thanh toán từ PayOS",
+     *     tags={"Thanh toán (Checkout)"},
+     *     @OA\Response(response=200, description="Đã xử lý webhook")
+     * )
      */
     public function payosWebhook(Request $request)
     {

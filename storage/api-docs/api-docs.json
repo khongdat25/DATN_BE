@@ -15,13 +15,239 @@
         }
     ],
     "paths": {
+        "/api/ai/chat": {
+            "post": {
+                "tags": [
+                    "AI Chatbot"
+                ],
+                "summary": "Tư vấn AI Chatbot",
+                "description": "Hỗ trợ tư vấn chọn size giày, gợi ý phong cách thời trang và tìm kiếm sản phẩm bằng Gemini AI",
+                "operationId": "f8e3377daae2aff1fb81fdc949768eeb",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "message"
+                                ],
+                                "properties": {
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Chân mình dài 25.5cm thì đi size bao nhiêu?"
+                                    },
+                                    "history": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Phản hồi thành công từ AI",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "reply": {
+                                            "type": "string",
+                                            "example": "Bảng quy đổi cho chiều dài chân 25.5 cm..."
+                                        },
+                                        "recommended_products": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/addresses": {
+            "get": {
+                "tags": [
+                    "Địa chỉ (Address)"
+                ],
+                "summary": "Danh sách địa chỉ giao hàng của tôi",
+                "operationId": "42a2d2b8c9f5740c56cb8c01b797937c",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Địa chỉ (Address)"
+                ],
+                "summary": "Thêm mới địa chỉ giao hàng",
+                "operationId": "615e32796f01ea189cee5ee58110aacb",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "address",
+                                    "badge"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Nguyễn Văn A"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0987654321"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "123 Lê Lợi, Q.1, TP.HCM"
+                                    },
+                                    "badge": {
+                                        "type": "string",
+                                        "example": "Nhà riêng"
+                                    },
+                                    "is_default": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Thêm thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/addresses/{id}": {
+            "put": {
+                "tags": [
+                    "Địa chỉ (Address)"
+                ],
+                "summary": "Cập nhật địa chỉ giao hàng",
+                "operationId": "9f4c75b2cde9de07b4dcdb55402bcec8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "address",
+                                    "badge"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "badge": {
+                                        "type": "string"
+                                    },
+                                    "is_default": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Địa chỉ (Address)"
+                ],
+                "summary": "Xóa địa chỉ giao hàng",
+                "operationId": "9d19815550623503ddbd789bb837fc94",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/register": {
             "post": {
                 "tags": [
                     "Xác thực (Authentication)"
                 ],
                 "summary": "Đăng ký tài khoản người dùng mới",
-                "description": "Tạo một tài khoản user mới sử dụng Email, Số điện thoại, Mật khẩu từ Frontend và tự động trả về Sanctum token để đăng nhập ngay lập tức.",
+                "description": "Tạo một tài khoản user mới sử dụng Email, Số điện thoại, Mật khẩu từ Frontend và tự động đăng nhập bằng phiên làm việc.",
                 "operationId": "d6f5d00c40f9de2e9272088aebe648c8",
                 "requestBody": {
                     "description": "Dữ liệu đăng ký tài khoản",
@@ -92,14 +318,6 @@
                                                         }
                                                     },
                                                     "type": "object"
-                                                },
-                                                "access_token": {
-                                                    "type": "string",
-                                                    "example": "1|xxxxxxxxxxxxxxxxxxxxxxxx"
-                                                },
-                                                "token_type": {
-                                                    "type": "string",
-                                                    "example": "Bearer"
                                                 }
                                             },
                                             "type": "object"
@@ -151,7 +369,7 @@
                     "Xác thực (Authentication)"
                 ],
                 "summary": "Đăng nhập người dùng",
-                "description": "Xác thực thông tin đăng nhập (Email & Mật khẩu) và cấp Sanctum token mới.",
+                "description": "Xác thực thông tin đăng nhập (Email & Mật khẩu) và tạo phiên đăng nhập cho người dùng.",
                 "operationId": "0f5784f47a3fcac35f86ec4e82d967d7",
                 "requestBody": {
                     "description": "Dữ liệu đăng nhập",
@@ -217,14 +435,6 @@
                                                         }
                                                     },
                                                     "type": "object"
-                                                },
-                                                "access_token": {
-                                                    "type": "string",
-                                                    "example": "1|xxxxxxxxxxxxxxxxxxxxxxxx"
-                                                },
-                                                "token_type": {
-                                                    "type": "string",
-                                                    "example": "Bearer"
                                                 }
                                             },
                                             "type": "object"
@@ -296,7 +506,7 @@
                     "Xác thực (Authentication)"
                 ],
                 "summary": "Đăng xuất người dùng",
-                "description": "Vô hiệu hóa và xóa Sanctum token hiện tại của tài khoản đang đăng nhập.",
+                "description": "Đăng xuất và hủy phiên làm việc hiện tại của tài khoản đang đăng nhập.",
                 "operationId": "d07352aa1a19c3f27d2df5ced5f833cf",
                 "responses": {
                     "200": {
@@ -320,7 +530,7 @@
                         }
                     },
                     "401": {
-                        "description": "Chưa đăng nhập / Token không hợp lệ",
+                        "description": "Chưa đăng nhập / Phiên không hợp lệ",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -328,6 +538,380 @@
                                         "message": {
                                             "type": "string",
                                             "example": "Unauthenticated."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/users": {
+            "get": {
+                "tags": [
+                    "Quản lý Người dùng (User)"
+                ],
+                "summary": "[Admin] Danh sách người dùng (User Management)",
+                "operationId": "7bd2e5f13505024a08922d6b136bff6a",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Tìm kiếm tên, email, sđt",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Trạng thái (active/blocked/locked/all)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "description": "Vai trò (admin/user/all)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Quản lý Người dùng (User)"
+                ],
+                "summary": "[Admin] Tạo mới người dùng",
+                "operationId": "0fa917f822980ef0e77684a1c2c4ef05",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "phone",
+                                    "role",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Trần Văn B"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "tranvanb@gmail.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0912345678"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "example": "Khách hàng"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users/{id}": {
+            "put": {
+                "tags": [
+                    "Quản lý Người dùng (User)"
+                ],
+                "summary": "[Admin] Cập nhật vai trò người dùng",
+                "operationId": "ba37d15b24208f879a7ea62b0cccf850",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "role"
+                                ],
+                                "properties": {
+                                    "role": {
+                                        "type": "string",
+                                        "example": "Quản trị viên"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Quản lý Người dùng (User)"
+                ],
+                "summary": "[Admin] Xóa người dùng",
+                "operationId": "8492206b57e9269a4956274f6596fe41",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users/{id}/status": {
+            "put": {
+                "tags": [
+                    "Quản lý Người dùng (User)"
+                ],
+                "summary": "[Admin] Khóa / Mở khóa tài khoản người dùng",
+                "operationId": "b138f41d70737e2eef6f493ba945e950",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "active",
+                                            "blocked",
+                                            "locked"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/banners": {
+            "get": {
+                "tags": [
+                    "Quản lý Banner (Admin)"
+                ],
+                "summary": "[Admin] Danh sách tất cả Banners",
+                "description": "Lấy danh sách Banners phục vụ quản trị, hỗ trợ lọc theo trạng thái và tìm kiếm",
+                "operationId": "bc3b8e74c9adf55f0d1f4780e3ee02c7",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Từ khóa tìm kiếm tiêu đề, vị trí, liên kết",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Trạng thái (active/expired/all)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Quản lý Banner (Admin)"
+                ],
+                "summary": "[Admin] Tạo Banner mới",
+                "operationId": "a89cd602cdbbc67d31b5dd46c9d8840d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "image"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Khuyến mãi Mùa Hè"
+                                    },
+                                    "image": {
+                                        "type": "string",
+                                        "example": "banner_summer.jpg"
+                                    },
+                                    "position": {
+                                        "type": "string",
+                                        "example": "Trang chủ - Slider chính (Hero)"
+                                    },
+                                    "link": {
+                                        "type": "string",
+                                        "example": "/products"
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-01"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-01"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "active"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tạo banner mới thành công!"
                                         }
                                     },
                                     "type": "object"
@@ -343,13 +927,14 @@
                 ]
             }
         },
-        "/api/products": {
+        "/api/banner": {
             "get": {
                 "tags": [
-                    "Sản phẩm (Products)"
+                    "Quản lý Banner (Admin)"
                 ],
-                "summary": "Lấy danh sách tất cả sản phẩm",
-                "operationId": "7eeb3d6953b4ea8123e262ef8aacc4b8",
+                "summary": "Lấy danh sách Banner đang hiển thị (Công khai)",
+                "description": "Trả về danh sách Banner có trạng thái active để hiển thị trên trang chủ",
+                "operationId": "02bc1563cd858a300745ed53936c11df",
                 "responses": {
                     "200": {
                         "description": "Thành công",
@@ -360,10 +945,6 @@
                                         "success": {
                                             "type": "boolean",
                                             "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "test all datas"
                                         },
                                         "data": {
                                             "type": "array",
@@ -380,41 +961,3368 @@
                 }
             }
         },
-        "/api/banner": {
-            "get": {
+        "/api/admin/banners/{id}": {
+            "put": {
                 "tags": [
-                    "Banners"
+                    "Quản lý Banner (Admin)"
                 ],
-                "summary": "Lấy danh sách slide banner",
-                "operationId": "53f7eec9c6fdfe6cc7d85e2b9a5d4dcc",
+                "summary": "[Admin] Cập nhật thông tin Banner",
+                "operationId": "1abb0923e5bafa6e121862156f4a3737",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "image": {
+                                        "type": "string"
+                                    },
+                                    "position": {
+                                        "type": "string"
+                                    },
+                                    "link": {
+                                        "type": "string"
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "status": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Thành công",
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Quản lý Banner (Admin)"
+                ],
+                "summary": "[Admin] Xóa Banner",
+                "operationId": "91e03ff318664a68424d9e454bb37b29",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/banners/{id}/toggle": {
+            "patch": {
+                "tags": [
+                    "Quản lý Banner (Admin)"
+                ],
+                "summary": "[Admin] Bật/Tắt trạng thái Banner",
+                "operationId": "41593c2ecdef31b8535fb71959a8532d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật trạng thái thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/blogs": {
+            "get": {
+                "tags": [
+                    "Tin tức (Blogs)"
+                ],
+                "summary": "Danh sách bài viết tin tức (Công khai)",
+                "operationId": "9819e5802278e060898795fe3c919599",
+                "parameters": [
+                    {
+                        "name": "featuring",
+                        "in": "query",
+                        "description": "Lọc bài viết nổi bật (true/false)",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Tìm kiếm theo tiêu đề",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Số lượng bài viết trên 1 trang",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/admin/blogs": {
+            "get": {
+                "tags": [
+                    "Tin tức (Blogs)"
+                ],
+                "summary": "[Admin] Danh sách toàn bộ bài viết tin tức",
+                "operationId": "5404d4702339264422ec8d40bdb953b3",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Tin tức (Blogs)"
+                ],
+                "summary": "[Admin] Thêm bài viết tin tức mới",
+                "operationId": "867fb5aa34a79a25e054dada9080eff3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "content"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Xu hướng Sneaker 2026"
+                                    },
+                                    "avatar": {
+                                        "type": "string",
+                                        "example": "blog1.jpg"
+                                    },
+                                    "comment": {
+                                        "type": "string",
+                                        "example": "Mô tả ngắn"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "example": "Nội dung bài viết chi tiết..."
+                                    },
+                                    "featuring": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/blogs/{slugOrId}": {
+            "get": {
+                "tags": [
+                    "Tin tức (Blogs)"
+                ],
+                "summary": "Chi tiết bài viết tin tức",
+                "operationId": "48e464ad634a1c495c6ba3361e6eb0ca",
+                "parameters": [
+                    {
+                        "name": "slugOrId",
+                        "in": "path",
+                        "description": "ID hoặc Slug bài viết",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy"
+                    }
+                }
+            }
+        },
+        "/api/admin/blogs/{id}": {
+            "post": {
+                "tags": [
+                    "Tin tức (Blogs)"
+                ],
+                "summary": "[Admin] Cập nhật bài viết tin tức",
+                "operationId": "38dbe669f57bb3e32121986cdc12dc8f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "avatar": {
+                                        "type": "string"
+                                    },
+                                    "comment": {
+                                        "type": "string"
+                                    },
+                                    "content": {
+                                        "type": "string"
+                                    },
+                                    "featuring": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Tin tức (Blogs)"
+                ],
+                "summary": "[Admin] Xóa bài viết tin tức",
+                "operationId": "93373007fc549a7b322d9628a6cd9404",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/brand": {
+            "get": {
+                "tags": [
+                    "Quản lý Thương hiệu (Brand)"
+                ],
+                "summary": "Lấy danh sách thương hiệu",
+                "operationId": "25c1b1e2bbeba7bfb9df6748b277a205",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Từ khóa tìm kiếm theo tên",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Trạng thái",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "description": "Sắp xếp (asc/desc)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/brand/toggle-cate/{id}": {
+            "patch": {
+                "tags": [
+                    "Quản lý Thương hiệu (Brand)"
+                ],
+                "summary": "Bật/tắt trạng thái thương hiệu",
+                "operationId": "0cd0986503c2de1c3cc504e785fb9581",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/brand/toggle-feature/{id}": {
+            "patch": {
+                "tags": [
+                    "Quản lý Thương hiệu (Brand)"
+                ],
+                "summary": "Bật/tắt trạng thái nổi bật của thương hiệu",
+                "operationId": "4bc2765e5ac10dfa586036453046199b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/brand/add": {
+            "post": {
+                "tags": [
+                    "Quản lý Thương hiệu (Brand)"
+                ],
+                "summary": "Thêm mới thương hiệu",
+                "operationId": "759a490cbc79067b40b95d1824bd26c3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Nike"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Mô tả thương hiệu..."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/brand/edit/{id}": {
+            "put": {
+                "tags": [
+                    "Quản lý Thương hiệu (Brand)"
+                ],
+                "summary": "Cập nhật thông tin thương hiệu",
+                "operationId": "1451136bdd9991373ed408ca9e71b752",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/brand/delete/{brand}": {
+            "delete": {
+                "tags": [
+                    "Quản lý Thương hiệu (Brand)"
+                ],
+                "summary": "Xóa thương hiệu",
+                "operationId": "32e269d6f1f36a1721c4b09925cc508f",
+                "parameters": [
+                    {
+                        "name": "brand",
+                        "in": "path",
+                        "description": "ID Thương hiệu",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    },
+                    "400": {
+                        "description": "Không thể xóa do thương hiệu có sản phẩm"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cart": {
+            "get": {
+                "tags": [
+                    "Giỏ hàng (Cart)"
+                ],
+                "summary": "Xem sản phẩm trong giỏ hàng",
+                "operationId": "0652f94dde92e36bbb3c461356ce1d7b",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Giỏ hàng (Cart)"
+                ],
+                "summary": "Thêm sản phẩm vào giỏ hàng",
+                "operationId": "b432c7bbb8b06ea2019c3d37f23258ca",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "variant_id"
+                                ],
+                                "properties": {
+                                    "variant_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Đã thêm vào giỏ hàng"
+                    },
+                    "400": {
+                        "description": "Vượt quá tồn kho"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cart/{id}": {
+            "put": {
+                "tags": [
+                    "Giỏ hàng (Cart)"
+                ],
+                "summary": "Cập nhật số lượng sản phẩm trong giỏ hàng",
+                "operationId": "ce6d8910efe0dda5a56c85b4383c4010",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Cart ID hoặc Variant ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "quantity": {
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Giỏ hàng (Cart)"
+                ],
+                "summary": "Xóa mục khỏi giỏ hàng",
+                "operationId": "5fc80ceb0ebae6f9fed7fc27e0f93592",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Cart ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cart/clear": {
+            "delete": {
+                "tags": [
+                    "Giỏ hàng (Cart)"
+                ],
+                "summary": "Xóa toàn bộ giỏ hàng",
+                "operationId": "c2cf94402630acad1cc6d317ec806693",
+                "responses": {
+                    "200": {
+                        "description": "Đã xóa toàn bộ giỏ hàng"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admincategory": {
+            "get": {
+                "tags": [
+                    "Quản lý Danh mục (Category)"
+                ],
+                "summary": "[Admin] Danh sách danh mục sản phẩm",
+                "operationId": "fc90e819c072274005aab8d6e141a76c",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Từ khóa tìm kiếm theo tên",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Trạng thái",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "description": "Sắp xếp (byname/byslug/bynumber)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/toggle/{id}": {
+            "patch": {
+                "tags": [
+                    "Quản lý Danh mục (Category)"
+                ],
+                "summary": "Bật/tắt trạng thái danh mục",
+                "operationId": "dffb37aeb8c4b5209c11704d10faa9ab",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/category_add": {
+            "post": {
+                "tags": [
+                    "Quản lý Danh mục (Category)"
+                ],
+                "summary": "Thêm mới danh mục sản phẩm",
+                "operationId": "8acf71b06b501a4ec1e8717f18829930",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "slug"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Giày Sneaker Nam"
+                                    },
+                                    "slug": {
+                                        "type": "string",
+                                        "example": "giay-sneaker-nam"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Các mẫu giày sneaker nam hot nhất"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/category_edit/{id}": {
+            "post": {
+                "tags": [
+                    "Quản lý Danh mục (Category)"
+                ],
+                "summary": "Cập nhật thông tin danh mục",
+                "operationId": "5c12a5ad73fc4ec8149cd7d5a9f20c8d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "slug",
+                                    "status"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "slug": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "status": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/category/{category}": {
+            "delete": {
+                "tags": [
+                    "Quản lý Danh mục (Category)"
+                ],
+                "summary": "Xóa danh mục sản phẩm",
+                "operationId": "8a68670bea63d8ab0f2c95895577f7b4",
+                "parameters": [
+                    {
+                        "name": "category",
+                        "in": "path",
+                        "description": "ID danh mục",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    },
+                    "400": {
+                        "description": "Danh mục đang chứa sản phẩm"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/checkout": {
+            "post": {
+                "tags": [
+                    "Thanh toán (Checkout)"
+                ],
+                "summary": "Tạo đơn hàng & Thanh toán (Checkout)",
+                "description": "Tạo đơn hàng từ giỏ hàng hoặc mua ngay, tích hợp cổng thanh toán PayOS nếu chọn thanh toán QR",
+                "operationId": "22a1371e159bf2ee6b9e18bba1cbd614",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "phone",
+                                    "address"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Nguyễn Văn A"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "nguyenvana@gmail.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0987654321"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "123 Nguyễn Huệ, Q.1, TP.HCM"
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "example": "Giao buổi chiều"
+                                    },
+                                    "payment_method_id": {
+                                        "description": "1: COD, 2: PayOS QR",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "voucher_id": {
+                                        "type": "integer",
+                                        "example": null
+                                    },
+                                    "shipping_fee": {
+                                        "type": "number",
+                                        "example": 30000
+                                    },
+                                    "variant_id": {
+                                        "description": "Nếu Mua Ngay",
+                                        "type": "integer",
+                                        "example": null
+                                    },
+                                    "quantity": {
+                                        "description": "Số lượng Mua Ngay",
+                                        "type": "integer",
+                                        "example": null
+                                    },
+                                    "cart_item_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo đơn hàng thành công",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Hero Banner"
-                                        },
                                         "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object"
-                                            }
+                                            "type": "object"
+                                        },
+                                        "checkout_url": {
+                                            "type": "string"
                                         }
                                     },
                                     "type": "object"
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Lỗi dữ liệu / Tồn kho không đủ"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/payment/payos-webhook": {
+            "post": {
+                "tags": [
+                    "Thanh toán (Checkout)"
+                ],
+                "summary": "Webhook xử lý kết quả thanh toán từ PayOS",
+                "operationId": "7754eed9235712b2360af1dc7f44b1ea",
+                "responses": {
+                    "200": {
+                        "description": "Đã xử lý webhook"
                     }
                 }
+            }
+        },
+        "/api/color": {
+            "get": {
+                "tags": [
+                    "Quản lý Màu sắc (Color)"
+                ],
+                "summary": "Lấy danh sách màu sắc",
+                "operationId": "3ea0a74a0e8dba4775e7592555f2b6f9",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Từ khóa tìm kiếm",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Trạng thái",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "description": "Sắp xếp",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/color/toggle-cate/{id}": {
+            "patch": {
+                "tags": [
+                    "Quản lý Màu sắc (Color)"
+                ],
+                "summary": "Bật/tắt trạng thái màu sắc",
+                "operationId": "4e5430791a33e485fbad942a1ea6a8fb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/color/add": {
+            "post": {
+                "tags": [
+                    "Quản lý Màu sắc (Color)"
+                ],
+                "summary": "Thêm mới màu sắc",
+                "operationId": "c1e4fa40866b5ddf55e462bb022a651e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "color_code",
+                                    "status"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Đen"
+                                    },
+                                    "color_code": {
+                                        "type": "string",
+                                        "example": "#000000"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Màu đen huyền bí"
+                                    },
+                                    "status": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/color/edit/{id}": {
+            "put": {
+                "tags": [
+                    "Quản lý Màu sắc (Color)"
+                ],
+                "summary": "Cập nhật thông tin màu sắc",
+                "operationId": "b30282f725cabac5cd02032f3d767fb8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "color_code",
+                                    "status"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "color_code": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "status": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/color/delete/{color}": {
+            "delete": {
+                "tags": [
+                    "Quản lý Màu sắc (Color)"
+                ],
+                "summary": "Xóa màu sắc",
+                "operationId": "bc8e1f0782d894ddb1339273555eb4dd",
+                "parameters": [
+                    {
+                        "name": "color",
+                        "in": "path",
+                        "description": "ID Màu sắc",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    },
+                    "400": {
+                        "description": "Không thể xóa do màu sắc đang được sử dụng"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/contacts": {
+            "post": {
+                "tags": [
+                    "Liên hệ (Contact)"
+                ],
+                "summary": "Gửi thông tin liên hệ (Công khai)",
+                "operationId": "a3b0baf957a16c1ed505f2e8985c254c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "message"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Nguyễn Văn A"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "nguyenvana@gmail.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0987654321"
+                                    },
+                                    "subject": {
+                                        "type": "string",
+                                        "example": "Cần hỗ trợ đơn hàng"
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Tôi cần tư vấn thêm về đổi trả..."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Gửi thành công"
+                    }
+                }
+            }
+        },
+        "/api/admin/contacts": {
+            "get": {
+                "tags": [
+                    "Liên hệ (Contact)"
+                ],
+                "summary": "[Admin] Danh sách tin nhắn liên hệ",
+                "operationId": "e40a57d97cbf203eb597f7a410ecfa6f",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Trạng thái (pending/processed)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Tìm theo tên/email/chủ đề",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/contacts/{id}": {
+            "get": {
+                "tags": [
+                    "Liên hệ (Contact)"
+                ],
+                "summary": "[Admin] Chi tiết tin nhắn liên hệ",
+                "operationId": "97b7b815884d26d0c580133a1d1cdc13",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Liên hệ (Contact)"
+                ],
+                "summary": "[Admin] Phản hồi & Cập nhật trạng thái liên hệ",
+                "operationId": "0f7dbf30303a78ea9ede141156a0b575",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "example": "processed"
+                                    },
+                                    "reply_content": {
+                                        "type": "string",
+                                        "example": "Chào bạn, SaigonShoes đã xử lý..."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Liên hệ (Contact)"
+                ],
+                "summary": "[Admin] Xóa tin nhắn liên hệ",
+                "operationId": "d06e32cdd5cea4d0ee4447a8f2d0e44e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/dashboard-stats": {
+            "get": {
+                "tags": [
+                    "Dashboard Admin"
+                ],
+                "summary": "[Admin] Lấy dữ liệu thống kê tổng quan (Dashboard)",
+                "description": "Thống kê tổng doanh thu, số đơn hàng hoàn thành, khách hàng, sản phẩm, top bán chạy và biểu đồ doanh thu",
+                "operationId": "23d7eb9c3bbd4a2b537b456b7a15d162",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/orders": {
+            "get": {
+                "tags": [
+                    "Đơn hàng (Order)"
+                ],
+                "summary": "[Admin] Danh sách tất cả đơn hàng",
+                "operationId": "4cb77c0a02289742e85d592a2584da08",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/orders/{id}/status": {
+            "post": {
+                "tags": [
+                    "Đơn hàng (Order)"
+                ],
+                "summary": "[Admin] Cập nhật trạng thái đơn hàng",
+                "operationId": "9d8065b0bdd28c3892c8af09e303e688",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "new",
+                                            "pending",
+                                            "shipping",
+                                            "delivered",
+                                            "cancelled"
+                                        ]
+                                    },
+                                    "payment_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pending",
+                                            "paid",
+                                            "refunded"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/orders/{id}": {
+            "delete": {
+                "tags": [
+                    "Đơn hàng (Order)"
+                ],
+                "summary": "[Admin] Xóa đơn hàng",
+                "operationId": "8febd1bde00f9b437095f794c6c9e0eb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/user/orders": {
+            "get": {
+                "tags": [
+                    "Đơn hàng (Order)"
+                ],
+                "summary": "Danh sách đơn mua của tôi",
+                "operationId": "836184aa55de189c467e97c41a21f4eb",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/user/orders/{id}/cancel": {
+            "post": {
+                "tags": [
+                    "Đơn hàng (Order)"
+                ],
+                "summary": "Hủy đơn hàng của tôi",
+                "operationId": "7e7dfe3a529604d55f7306987d020453",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "example": "Đổi ý không muốn mua nữa"
+                                    },
+                                    "restore_cart": {
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Hủy thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/user/orders/{id}/confirm-payment": {
+            "post": {
+                "tags": [
+                    "Đơn hàng (Order)"
+                ],
+                "summary": "Xác nhận thanh toán đơn hàng",
+                "operationId": "f499e2950296c3930f5eb724c35a0348",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xác nhận thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/user/orders/{id}": {
+            "get": {
+                "tags": [
+                    "Đơn hàng (Order)"
+                ],
+                "summary": "Chi tiết một đơn hàng của tôi",
+                "operationId": "b2366769f8c470169519863083551275",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Đơn hàng (Order)"
+                ],
+                "summary": "Hủy và khôi phục giỏ hàng cho đơn chưa thanh toán",
+                "operationId": "a2b2fd0176ee520081d897041fc14fed",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/products": {
+            "get": {
+                "tags": [
+                    "Sản phẩm (Product)"
+                ],
+                "summary": "Danh sách tất cả sản phẩm (Công khai)",
+                "operationId": "7eeb3d6953b4ea8123e262ef8aacc4b8",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/getcategories": {
+            "get": {
+                "tags": [
+                    "Sản phẩm (Product)"
+                ],
+                "summary": "Lấy danh sách rút gọn các danh mục",
+                "operationId": "264e1599414c4199fab94d91a31601f5",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/getbrands": {
+            "get": {
+                "tags": [
+                    "Sản phẩm (Product)"
+                ],
+                "summary": "Lấy danh sách rút gọn các thương hiệu",
+                "operationId": "2c298343a3902ead7a3aa9b7f81b86ce",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/categories": {
+            "get": {
+                "tags": [
+                    "Sản phẩm (Product)"
+                ],
+                "summary": "Lấy danh sách danh mục nổi bật",
+                "operationId": "7740c223fef78a0473940a00723f18a8",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/flashsales": {
+            "get": {
+                "tags": [
+                    "Sản phẩm (Product)"
+                ],
+                "summary": "Danh sách sản phẩm Flash Sale đang diễn ra",
+                "operationId": "749e683e9a405ec036e91785a22393f9",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/bestsellings": {
+            "get": {
+                "tags": [
+                    "Sản phẩm (Product)"
+                ],
+                "summary": "Danh sách sản phẩm bán chạy nhất",
+                "operationId": "9347d991c67870e7580c311771a4e204",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/hotproducts": {
+            "get": {
+                "tags": [
+                    "Sản phẩm (Product)"
+                ],
+                "summary": "Danh sách sản phẩm nổi bật (Hot Products)",
+                "operationId": "b7f2c06808440421e57d306330cc56c1",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/product/{slug}": {
+            "get": {
+                "tags": [
+                    "Sản phẩm (Product)"
+                ],
+                "summary": "Chi tiết sản phẩm theo Slug hoặc ID",
+                "operationId": "5a051b5d7f283884645ed0a4a204187f",
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "description": "ID hoặc Slug sản phẩm",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    },
+                    "404": {
+                        "description": "Không tìm thấy sản phẩm"
+                    }
+                }
+            }
+        },
+        "/api/search": {
+            "get": {
+                "tags": [
+                    "Sản phẩm (Product)"
+                ],
+                "summary": "Tìm kiếm & Lọc sản phẩm",
+                "operationId": "e1a27740626cd48651762c92c243e138",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Từ khóa tìm kiếm tên sản phẩm",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "brand_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "min_price",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "max_price",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "size",
+                        "in": "query",
+                        "description": "Kích thước (ví dụ 42)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "description": "Lọc: price_asc, price_desc, sold_desc, sold_asc, newest, oldest",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                }
+            }
+        },
+        "/api/adminproduct": {
+            "get": {
+                "tags": [
+                    "Quản lý Sản phẩm (Admin Product)"
+                ],
+                "summary": "[Admin] Danh sách tất cả sản phẩm kèm biến thể",
+                "operationId": "3c63a05aeffd2e861872c39a9eab33d8",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "category_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "brand_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/product/{id}": {
+            "delete": {
+                "tags": [
+                    "Quản lý Sản phẩm (Admin Product)"
+                ],
+                "summary": "[Admin] Xóa sản phẩm",
+                "operationId": "1ed4580b0c9f0be2340ff9ceda85611b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    },
+                    "400": {
+                        "description": "Sản phẩm đang có đơn hàng xử lý"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/variant/{v}": {
+            "delete": {
+                "tags": [
+                    "Quản lý Sản phẩm (Admin Product)"
+                ],
+                "summary": "[Admin] Xóa biến thể sản phẩm",
+                "operationId": "e4e528439d38e92c106da96927c3944f",
+                "parameters": [
+                    {
+                        "name": "v",
+                        "in": "path",
+                        "description": "Variant ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/product_add": {
+            "post": {
+                "tags": [
+                    "Quản lý Sản phẩm (Admin Product)"
+                ],
+                "summary": "[Admin] Thêm sản phẩm mới kèm danh sách biến thể",
+                "operationId": "218c80053e4dcc872c62ac43c2f2a6d3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "category_id",
+                                    "brand_id",
+                                    "variants"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Giày Nike Air Force 1"
+                                    },
+                                    "category_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "brand_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Mô tả sản phẩm..."
+                                    },
+                                    "images": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "is_featured": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "variants": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "size_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "color_id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "stock": {
+                                                    "type": "integer",
+                                                    "example": 50
+                                                },
+                                                "price": {
+                                                    "type": "number",
+                                                    "example": 2500000
+                                                },
+                                                "image": {
+                                                    "type": "string",
+                                                    "example": null
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/product_edit/{id}": {
+            "post": {
+                "tags": [
+                    "Quản lý Sản phẩm (Admin Product)"
+                ],
+                "summary": "[Admin] Cập nhật thông tin sản phẩm & biến thể",
+                "operationId": "a27fc48595b96e8ec1e1ecf54b80f277",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "category_id",
+                                    "brand_id",
+                                    "variants"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "category_id": {
+                                        "type": "integer"
+                                    },
+                                    "brand_id": {
+                                        "type": "integer"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "images": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "is_featured": {
+                                        "type": "boolean"
+                                    },
+                                    "variants": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/upload": {
+            "post": {
+                "tags": [
+                    "Quản lý Sản phẩm (Admin Product)"
+                ],
+                "summary": "Tải ảnh sản phẩm lên server",
+                "operationId": "cbb3d5bf7c8dc609b3d557c34923ae50",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "image": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tải lên thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/product/toggle-featured/{id}": {
+            "patch": {
+                "tags": [
+                    "Quản lý Sản phẩm (Admin Product)"
+                ],
+                "summary": "[Admin] Bật/tắt trạng thái nổi bật của sản phẩm",
+                "operationId": "18be9e9bb99877d0b5c67a981d0a4aa9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/product_import_excel": {
+            "post": {
+                "tags": [
+                    "Quản lý Sản phẩm (Admin Product)"
+                ],
+                "summary": "[Admin] Nhập hàng loạt sản phẩm từ Excel",
+                "operationId": "886abff62fbb3e7eff8ce0988bfd1a08",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "products"
+                                ],
+                                "properties": {
+                                    "products": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Nhập file Excel thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/ratings": {
+            "post": {
+                "tags": [
+                    "Đánh giá sản phẩm (Rating)"
+                ],
+                "summary": "Gửi đánh giá sản phẩm",
+                "operationId": "e876bdaebd2a715619d9d19e8be09398",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "order_item_id",
+                                    "rating"
+                                ],
+                                "properties": {
+                                    "order_item_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "rating": {
+                                        "type": "integer",
+                                        "maximum": 5,
+                                        "minimum": 1,
+                                        "example": 5
+                                    },
+                                    "comment": {
+                                        "type": "string",
+                                        "example": "Giày đi rất êm chân, giao hàng nhanh!"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Gửi đánh giá thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reviews": {
+            "get": {
+                "tags": [
+                    "Đánh giá sản phẩm (Rating)"
+                ],
+                "summary": "[Admin] Danh sách đánh giá của khách hàng",
+                "operationId": "7555a41bac6f952ebe379bb7e73550d1",
+                "parameters": [
+                    {
+                        "name": "rating",
+                        "in": "query",
+                        "description": "Số sao (1-5 hoặc all)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Trạng thái (pending/replied/hidden/all)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Tìm theo tên/email/nội dung",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reviews/{id}/reply": {
+            "post": {
+                "tags": [
+                    "Đánh giá sản phẩm (Rating)"
+                ],
+                "summary": "[Admin] Phản hồi đánh giá",
+                "operationId": "09103b1a165e17ed218a3a70d7fef906",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reply"
+                                ],
+                                "properties": {
+                                    "reply": {
+                                        "type": "string",
+                                        "example": "Cảm ơn bạn đã tin tưởng SaigonShoes!"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Phản hồi thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reviews/{id}/status": {
+            "put": {
+                "tags": [
+                    "Đánh giá sản phẩm (Rating)"
+                ],
+                "summary": "[Admin] Cập nhật trạng thái hiển thị/ẩn đánh giá",
+                "operationId": "3edce7517aba4767c069d9eadd5ac7d0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "pending",
+                                            "replied",
+                                            "hidden"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/reviews/{id}": {
+            "delete": {
+                "tags": [
+                    "Đánh giá sản phẩm (Rating)"
+                ],
+                "summary": "[Admin] Xóa đánh giá",
+                "operationId": "0364246127ac99083be5ac8451bcf210",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/size": {
+            "get": {
+                "tags": [
+                    "Quản lý Size (Kích thước)"
+                ],
+                "summary": "Lấy danh sách kích thước (Size)",
+                "operationId": "3fd760a7981019343be8bf0101689bbc",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Từ khóa tìm kiếm theo tên",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Trạng thái",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "description": "Sắp xếp (asc/desc)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/size/toggle-cate/{id}": {
+            "patch": {
+                "tags": [
+                    "Quản lý Size (Kích thước)"
+                ],
+                "summary": "Bật/tắt trạng thái kích thước",
+                "operationId": "c5950d2fcc8abfb02302f27f8ff782fe",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/size/add": {
+            "post": {
+                "tags": [
+                    "Quản lý Size (Kích thước)"
+                ],
+                "summary": "Thêm mới kích thước",
+                "operationId": "c0fe59054ed75133a56fea79a2ec4db2",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "42"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Chân dài 25.5cm"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/size/edit/{id}": {
+            "put": {
+                "tags": [
+                    "Quản lý Size (Kích thước)"
+                ],
+                "summary": "Cập nhật thông tin kích thước",
+                "operationId": "1e74b8c2cfbd7e96eda0c879e59c1f67",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/size/delete/{size}": {
+            "delete": {
+                "tags": [
+                    "Quản lý Size (Kích thước)"
+                ],
+                "summary": "Xóa kích thước",
+                "operationId": "590f14f630e25fe008d4f4cc86f9e1c5",
+                "parameters": [
+                    {
+                        "name": "size",
+                        "in": "path",
+                        "description": "ID Kích thước",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    },
+                    "400": {
+                        "description": "Không thể xóa do kích thước đang được sử dụng"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/vouchers": {
+            "get": {
+                "tags": [
+                    "Quản lý Mã giảm giá (Voucher)"
+                ],
+                "summary": "[Admin] Danh sách tất cả mã giảm giá (Vouchers)",
+                "description": "Lấy danh sách tất cả mã giảm giá",
+                "operationId": "672a7e40e8a9169c77eee87f62802ef6",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Quản lý Mã giảm giá (Voucher)"
+                ],
+                "summary": "[Admin] Tạo mới mã giảm giá (Voucher)",
+                "description": "Tạo mới mã giảm giá (Admin)",
+                "operationId": "63de464c12f2ca3f7e7665afc770a90b",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code",
+                                    "name",
+                                    "type",
+                                    "value",
+                                    "min_order",
+                                    "total_usage",
+                                    "start_date",
+                                    "end_date",
+                                    "status"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "example": "SGS100K"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Giảm 100k cho đơn từ 1 triệu"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "percent",
+                                            "fixed",
+                                            "free_ship"
+                                        ],
+                                        "example": "fixed"
+                                    },
+                                    "value": {
+                                        "type": "number",
+                                        "example": 100000
+                                    },
+                                    "min_order": {
+                                        "type": "number",
+                                        "example": 1000000
+                                    },
+                                    "total_usage": {
+                                        "type": "integer",
+                                        "example": 50
+                                    },
+                                    "max_discount": {
+                                        "type": "number",
+                                        "example": null
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-01"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-08-31"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "active",
+                                            "upcoming",
+                                            "expired"
+                                        ],
+                                        "example": "active"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/vouchers/{id}": {
+            "get": {
+                "tags": [
+                    "Quản lý Mã giảm giá (Voucher)"
+                ],
+                "summary": "[Admin] Chi tiết mã giảm giá",
+                "description": "Xem chi tiết thông tin mã giảm giá (Admin)",
+                "operationId": "4c8342be7af0cbb34959ef7cc52cbc0d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Quản lý Mã giảm giá (Voucher)"
+                ],
+                "summary": "[Admin] Cập nhật mã giảm giá",
+                "description": "Cập nhật thông tin mã giảm giá (Admin)",
+                "operationId": "021813575d06df655a52d53708a25c61",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "percent",
+                                            "fixed",
+                                            "free_ship"
+                                        ]
+                                    },
+                                    "value": {
+                                        "type": "number"
+                                    },
+                                    "min_order": {
+                                        "type": "number"
+                                    },
+                                    "total_usage": {
+                                        "type": "integer"
+                                    },
+                                    "max_discount": {
+                                        "type": "number"
+                                    },
+                                    "start_date": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "end_date": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "active",
+                                            "upcoming",
+                                            "expired"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Quản lý Mã giảm giá (Voucher)"
+                ],
+                "summary": "[Admin] Xóa mã giảm giá",
+                "description": "Xóa mã giảm giá (Admin)",
+                "operationId": "af80418cad24d9e538e366a16de0a46a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/vouchers/available": {
+            "get": {
+                "tags": [
+                    "Quản lý Mã giảm giá (Voucher)"
+                ],
+                "summary": "Danh sách mã giảm giá khả dụng cho tôi",
+                "description": "Lấy danh sách các mã giảm giá khả dụng cho tài khoản người dùng",
+                "operationId": "0d21da51a6ab1b433d08c19dfe441fc1",
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/vouchers/apply": {
+            "post": {
+                "tags": [
+                    "Quản lý Mã giảm giá (Voucher)"
+                ],
+                "summary": "Áp dụng mã giảm giá khi thanh toán",
+                "description": "Kiểm tra và áp dụng mã giảm giá vào đơn hàng khi checkout",
+                "operationId": "8a33933f7ed127bdbd9fa4499a2715bb",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code",
+                                    "subtotal"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "example": "SGS100K"
+                                    },
+                                    "subtotal": {
+                                        "type": "number",
+                                        "example": 1200000
+                                    },
+                                    "shipping_fee": {
+                                        "type": "number",
+                                        "example": 30000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Áp dụng thành công"
+                    },
+                    "400": {
+                        "description": "Mã không hợp lệ hoặc không đủ điều kiện"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/flash-sale": {
+            "get": {
+                "tags": [
+                    "Quản lý Flash Sale"
+                ],
+                "summary": "[Admin] Danh sách và lọc các chiến dịch Flash Sale",
+                "operationId": "9f0d7de12989fc5eebabf4099c168a8c",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Trạng thái (1: Đang chạy, 2: Tạm dừng, 3: Kết thúc)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/flash-sale/delete/{id}": {
+            "delete": {
+                "tags": [
+                    "Quản lý Flash Sale"
+                ],
+                "summary": "[Admin] Xóa chiến dịch Flash Sale",
+                "operationId": "c94ddc7a9cdfe61f38ce18eb8b4beb7a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Xóa thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/flash-sale/add": {
+            "post": {
+                "tags": [
+                    "Quản lý Flash Sale"
+                ],
+                "summary": "[Admin] Tạo mới chiến dịch Flash Sale",
+                "operationId": "a250fdb6e0b2f19e123c487747719a45",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "discount_value",
+                                    "quantity_limit"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Flash Sale Giờ Vàng"
+                                    },
+                                    "start_time": {
+                                        "type": "string",
+                                        "example": "2026-08-01 10:00"
+                                    },
+                                    "end_time": {
+                                        "type": "string",
+                                        "example": "2026-08-01 22:00"
+                                    },
+                                    "discount_value": {
+                                        "type": "number",
+                                        "example": 20
+                                    },
+                                    "quantity_limit": {
+                                        "type": "integer",
+                                        "example": 50
+                                    },
+                                    "product_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tạo thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/flash-sale/edit/{id}": {
+            "put": {
+                "tags": [
+                    "Quản lý Flash Sale"
+                ],
+                "summary": "[Admin] Cập nhật chiến dịch Flash Sale",
+                "operationId": "6188ecdb30a8920aa158c0f761f768e6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "discount_value",
+                                    "quantity_limit"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "start_time": {
+                                        "type": "string"
+                                    },
+                                    "end_time": {
+                                        "type": "string"
+                                    },
+                                    "discount_value": {
+                                        "type": "number"
+                                    },
+                                    "quantity_limit": {
+                                        "type": "integer"
+                                    },
+                                    "product_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/flash-sale/toggle-cate/{id}": {
+            "patch": {
+                "tags": [
+                    "Quản lý Flash Sale"
+                ],
+                "summary": "[Admin] Bật/Tắt trạng thái chiến dịch Flash Sale",
+                "operationId": "6b407d4b3777beecd9ad1c66354c6902",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cập nhật thành công"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/flash-sale/end-camp/{id}": {
+            "patch": {
+                "tags": [
+                    "Quản lý Flash Sale"
+                ],
+                "summary": "[Admin] Kết thúc chiến dịch Flash Sale",
+                "operationId": "b3dd94068422df6779db2038a4793392",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Đã kết thúc chiến dịch"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         }
     },
@@ -430,16 +4338,84 @@
     },
     "tags": [
         {
+            "name": "AI Chatbot",
+            "description": "AI Chatbot"
+        },
+        {
+            "name": "Địa chỉ (Address)",
+            "description": "Địa chỉ (Address)"
+        },
+        {
             "name": "Xác thực (Authentication)",
             "description": "Xác thực (Authentication)"
         },
         {
-            "name": "Sản phẩm (Products)",
-            "description": "Sản phẩm (Products)"
+            "name": "Quản lý Người dùng (User)",
+            "description": "Quản lý Người dùng (User)"
         },
         {
-            "name": "Banners",
-            "description": "Banners"
+            "name": "Quản lý Banner (Admin)",
+            "description": "Quản lý Banner (Admin)"
+        },
+        {
+            "name": "Tin tức (Blogs)",
+            "description": "Tin tức (Blogs)"
+        },
+        {
+            "name": "Quản lý Thương hiệu (Brand)",
+            "description": "Quản lý Thương hiệu (Brand)"
+        },
+        {
+            "name": "Giỏ hàng (Cart)",
+            "description": "Giỏ hàng (Cart)"
+        },
+        {
+            "name": "Quản lý Danh mục (Category)",
+            "description": "Quản lý Danh mục (Category)"
+        },
+        {
+            "name": "Thanh toán (Checkout)",
+            "description": "Thanh toán (Checkout)"
+        },
+        {
+            "name": "Quản lý Màu sắc (Color)",
+            "description": "Quản lý Màu sắc (Color)"
+        },
+        {
+            "name": "Liên hệ (Contact)",
+            "description": "Liên hệ (Contact)"
+        },
+        {
+            "name": "Dashboard Admin",
+            "description": "Dashboard Admin"
+        },
+        {
+            "name": "Đơn hàng (Order)",
+            "description": "Đơn hàng (Order)"
+        },
+        {
+            "name": "Sản phẩm (Product)",
+            "description": "Sản phẩm (Product)"
+        },
+        {
+            "name": "Quản lý Sản phẩm (Admin Product)",
+            "description": "Quản lý Sản phẩm (Admin Product)"
+        },
+        {
+            "name": "Đánh giá sản phẩm (Rating)",
+            "description": "Đánh giá sản phẩm (Rating)"
+        },
+        {
+            "name": "Quản lý Size (Kích thước)",
+            "description": "Quản lý Size (Kích thước)"
+        },
+        {
+            "name": "Quản lý Mã giảm giá (Voucher)",
+            "description": "Quản lý Mã giảm giá (Voucher)"
+        },
+        {
+            "name": "Quản lý Flash Sale",
+            "description": "Quản lý Flash Sale"
         }
     ]
 }

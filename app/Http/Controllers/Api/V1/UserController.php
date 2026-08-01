@@ -67,13 +67,22 @@ class UserController extends Controller
     }
 
     /**
-     * Lấy danh sách toàn bộ người dùng kèm theo tổng số đơn và chi tiêu (Admin)
+     * @OA\Get(
+     *     path="/api/admin/users",
+     *     summary="[Admin] Danh sách người dùng (User Management)",
+     *     tags={"Quản lý Người dùng (User)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="search", in="query", required=false, description="Tìm kiếm tên, email, sđt", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="status", in="query", required=false, description="Trạng thái (active/blocked/locked/all)", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="role", in="query", required=false, description="Vai trò (admin/user/all)", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="per_page", in="query", required=false, @OA\Schema(type="integer", default=10)),
+     *     @OA\Response(response=200, description="Thành công")
+     * )
      */
     public function index(Request $request)
     {
         $query = User::query();
 
-        // 1. Tìm kiếm theo từ khóa (tên, email, số điện thoại)
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
@@ -83,28 +92,23 @@ class UserController extends Controller
             });
         }
 
-        // 2. Lọc theo trạng thái
         if ($request->filled('status') && $request->input('status') !== 'all') {
             $status = $request->input('status');
             $dbStatus = $this->mapStatusToDb($status);
             $query->where('status', '=', $dbStatus);
         }
 
-        // 3. Lọc theo vai trò
         if ($request->filled('role') && $request->input('role') !== 'all') {
             $role = $request->input('role');
             $dbRole = $this->mapRoleToDb($role);
             $query->where('role', '=', $dbRole);
         }
 
-        // Sắp xếp ngày tạo mới nhất
         $query->orderBy('created_at', 'desc');
 
-        // Phân trang
         $perPage = $request->input('per_page', 10);
         $paginator = $query->paginate($perPage);
 
-        // Map data trả về cho FE
         $mappedUsers = collect($paginator->items())->map(function ($user) {
             return [
                 'id' => $user->id,
@@ -130,7 +134,24 @@ class UserController extends Controller
     }
 
     /**
-     * Thêm người dùng mới (Admin)
+     * @OA\Post(
+     *     path="/api/admin/users",
+     *     summary="[Admin] Tạo mới người dùng",
+     *     tags={"Quản lý Người dùng (User)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name","email","phone","role","password"},
+     *             @OA\Property(property="name", type="string", example="Trần Văn B"),
+     *             @OA\Property(property="email", type="string", example="tranvanb@gmail.com"),
+     *             @OA\Property(property="phone", type="string", example="0912345678"),
+     *             @OA\Property(property="role", type="string", example="Khách hàng"),
+     *             @OA\Property(property="password", type="string", example="123456")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Tạo thành công")
+     * )
      */
     public function store(Request $request)
     {
@@ -185,7 +206,21 @@ class UserController extends Controller
     }
 
     /**
-     * Cập nhật vai trò của thành viên (Admin)
+     * @OA\Put(
+     *     path="/api/admin/users/{id}",
+     *     summary="[Admin] Cập nhật vai trò người dùng",
+     *     tags={"Quản lý Người dùng (User)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"role"},
+     *             @OA\Property(property="role", type="string", example="Quản trị viên")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
      */
     public function update(Request $request, int $id)
     {
@@ -223,7 +258,21 @@ class UserController extends Controller
     }
 
     /**
-     * Cập nhật trạng thái khóa/hoạt động của tài khoản (Admin)
+     * @OA\Put(
+     *     path="/api/admin/users/{id}/status",
+     *     summary="[Admin] Khóa / Mở khóa tài khoản người dùng",
+     *     tags={"Quản lý Người dùng (User)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"status"},
+     *             @OA\Property(property="status", type="string", enum={"active","blocked","locked"})
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Cập nhật thành công")
+     * )
      */
     public function updateStatus(Request $request, int $id)
     {
@@ -244,7 +293,6 @@ class UserController extends Controller
 
         $user = User::findOrFail($id);
         
-        // Không cho phép tự khóa tài khoản của chính mình
         if (auth()->id() == $user->id) {
             return response()->json([
                 'success' => false,
@@ -267,13 +315,19 @@ class UserController extends Controller
     }
 
     /**
-     * Xóa thành viên - xóa mềm (Admin)
+     * @OA\Delete(
+     *     path="/api/admin/users/{id}",
+     *     summary="[Admin] Xóa người dùng",
+     *     tags={"Quản lý Người dùng (User)"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Xóa thành công")
+     * )
      */
     public function destroy(int $id)
     {
         $user = User::findOrFail($id);
 
-        // Không cho phép tự xóa tài khoản của chính mình
         if (auth()->id() == $user->id) {
             return response()->json([
                 'success' => false,
