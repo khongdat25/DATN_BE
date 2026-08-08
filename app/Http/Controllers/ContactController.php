@@ -119,7 +119,7 @@ class ContactController extends Controller
      */
     public function show(int $id)
     {
-        $contact = Contact::find($id);
+        $contact = Contact::find($id, ['*']);
 
         if (! $contact) {
             return response()->json([
@@ -155,7 +155,7 @@ class ContactController extends Controller
      */
     public function update(Request $request, int $id)
     {
-        $contact = Contact::find($id);
+        $contact = Contact::find($id, ['*']);
 
         if (! $contact) {
             return response()->json([
@@ -213,7 +213,7 @@ class ContactController extends Controller
      */
     public function destroy(int $id)
     {
-        $contact = Contact::find($id);
+        $contact = Contact::find($id, ['*']);
 
         if (! $contact) {
             return response()->json([

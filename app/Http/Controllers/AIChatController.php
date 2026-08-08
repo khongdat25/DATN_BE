@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProductModel;
+use App\Models\AiSetting;
+use App\Models\AiLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -43,6 +45,27 @@ class AIChatController extends Controller
 
         $userMessage = trim($request->input('message'));
 
+        // Check if AI Chatbot is enabled in Admin Settings
+        $setting = null;
+        try {
+            $setting = AiSetting::first(['*']);
+        } catch (\Exception $e) {}
+
+        if ($setting && isset($setting->is_enabled) && !$setting->is_enabled) {
+            return response()->json([
+                'success' => true,
+                'reply' => 'Hệ thống SaigonShoes AI Assistant hiện đang được tạm dừng để bảo trì nâng cấp. Bạn vui lòng quay lại sau ít phút nhé! 👟✨',
+                'recommended_products' => []
+            ], 200);
+        }
+
+        $temperature = $setting->temperature ?? 0.7;
+        $configuredPrompt = $setting->system_prompt ?? "Bạn là SaigonShoes AI Stylist - Trợ lý tư vấn chọn Size giày & Fashion Stylist cho cửa hàng SaigonShoes.";
+        $sizeGuide = $setting->size_chart_guide ?? "";
+        $shippingPolicy = $setting->shipping_policy ?? "";
+        $hotline = $setting->hotline ?? "";
+        $storeAddress = $setting->store_address ?? "";
+
         // 1. Lấy danh sách sản phẩm đang mở bán để làm ngữ cảnh dữ liệu cho AI
         $products = ProductModel::query()
             ->where('status', 1)
@@ -61,24 +84,24 @@ class AIChatController extends Controller
 
         // 2. Thiết lập System Prompt cho Chuyên gia tư vấn Chọn Size & Phối đồ
         $systemPrompt = <<<EOT
-Bạn là "SaigonShoes AI" - Trợ lý tư vấn chọn Size giày & Fashion Stylist cho cửa hàng SaigonShoes.
+{$configuredPrompt}
 
-Nhiệm vụ chính:
-1. TƯ VẤN CHỌN SIZE GIÀY & ĐI BỘ NHIỀU / CHÂN BÈ:
-   - Nếu khách phân vân giữa 2 size (ví dụ 42 hay 43) và đi bộ nhiều / đi du lịch: Luôn khuyên chọn SIZE LỚN HƠN (Size 43) vì đi bộ lâu bàn chân sẽ nở nhẹ và sưng tích nước, chọn size lớn giúp ngón chân không bị bó hay đau gót.
-   - Bảng quy đổi chiều dài chân: 24.5cm -> Size 40 | 25cm -> Size 41 | 25.5cm -> Size 42 | 26cm -> Size 43 | 26.5cm -> Size 44.
+HƯỚNG DẪN QUY ĐỔI SIZE:
+{$sizeGuide}
 
-2. TƯ VẤN PHONG CÁCH & PHỐI ĐỒ:
-   - Đóng vai Fashion Stylist nhiệt tình, gợi ý trang phục hợp xu hướng (Streetwear, Casual, Đi biển, Công sở).
+THÔNG TIN CỬA HÀNG & CHÍNH SÁCH VẬN CHUYỂN:
+- Địa chỉ shop: {$storeAddress}
+- Hotline: {$hotline}
+- Chính sách giao hàng & đổi trả: {$shippingPolicy}
 
-3. DANH SÁCH SẢN PHẨM CỬA HÀNG:
+DANH SÁCH SẢN PHẨM CỬA HÀNG:
 {$productListContext}
 
-4. QUY TẮC BẮT BUỘC:
-   - Trả lời bằng tiếng Việt tự nhiên, lịch sự, thân thiện, dùng icon 👟✨.
-   - TUYỆT ĐỐI KHÔNG in mã ID sản phẩm, không in "Mã sản phẩm #XX", không in ký tự kỹ thuật thô vào câu trả lời với khách hàng.
-   - Cuối câu trả lời, nếu có gợi ý sản phẩm cụ thể từ danh sách trên, thêm thẻ ẩn:
-     [RECOMMENDED_PRODUCTS: id1, id2]
+QUY TẮC BẮT BUỘC:
+- Trả lời bằng tiếng Việt tự nhiên, lịch sự, thân thiện, dùng icon 👟✨.
+- TUYỆT ĐỐI KHÔNG in mã ID sản phẩm, không in "Mã sản phẩm #XX", không in ký tự kỹ thuật thô vào câu trả lời với khách hàng.
+- Cuối câu trả lời, nếu có gợi ý sản phẩm cụ thể từ danh sách trên, thêm thẻ ẩn:
+  [RECOMMENDED_PRODUCTS: id1, id2]
 
 Câu hỏi từ khách hàng: {$userMessage}
 EOT;
@@ -93,6 +116,7 @@ EOT;
         }
         $replyText = '';
         $recommendedProductIds = [];
+        $tokensUsed = 0;
 
         if (!empty($apiKey)) {
             try {
@@ -109,7 +133,7 @@ EOT;
                             ]
                         ],
                         'generationConfig' => [
-                            'temperature' => 0.7,
+                            'temperature' => (float)$temperature,
                             'maxOutputTokens' => 2048,
                         ]
                     ]);
@@ -117,6 +141,7 @@ EOT;
                     if ($response->successful()) {
                         $resData = $response->json();
                         $replyText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                        $tokensUsed = $resData['usageMetadata']['totalTokenCount'] ?? 0;
                         if (!empty($replyText)) break;
                     } else {
                         Log::error("Gemini API ({$model}) Error: " . $response->body());
@@ -164,6 +189,35 @@ EOT;
                     'image' => $img ? (str_starts_with($img, 'http') ? $img : url('images/' . $img)) : null,
                 ];
             });
+        }
+
+        // 6. Ghi log lịch sử trò chuyện vào CSDL
+        try {
+            $user = auth('api')->user();
+            $topic = 'Tư vấn chung';
+            $lowerMsg = mb_strtolower($userMessage, 'UTF-8');
+            if (str_contains($lowerMsg, 'size') || str_contains($lowerMsg, 'cm') || str_contains($lowerMsg, 'chân')) {
+                $topic = 'Tư vấn Size';
+            } elseif (str_contains($lowerMsg, 'phối đồ') || str_contains($lowerMsg, 'style') || str_contains($lowerMsg, 'streetwear')) {
+                $topic = 'Phối đồ Style';
+            } elseif (str_contains($lowerMsg, 'giảm giá') || str_contains($lowerMsg, 'khuyến mãi') || str_contains($lowerMsg, 'voucher') || str_contains($lowerMsg, 'giá')) {
+                $topic = 'Giá & Khuyến mãi';
+            }
+
+            AiLog::create([
+                'user_id' => $user ? $user->id : null,
+                'user_name' => $user ? $user->name : 'Khách vương',
+                'user_email' => $user ? $user->email : null,
+                'user_phone' => $user ? $user->phone : null,
+                'topic' => $topic,
+                'messages_count' => 1,
+                'user_message' => $userMessage,
+                'bot_reply' => $replyText,
+                'recommended_product_ids' => array_values($recommendedProductIds),
+                'tokens_used' => $tokensUsed,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('AI Log creation failed: ' . $e->getMessage());
         }
 
         return response()->json([

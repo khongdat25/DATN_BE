@@ -74,6 +74,9 @@ class AddressController extends Controller
             'address' => 'required|string|max:500',
             'badge' => 'required|string|max:50',
             'is_default' => 'sometimes|boolean',
+            'province_id' => 'nullable|integer',
+            'district_id' => 'nullable|integer',
+            'ward_code' => 'nullable|string',
         ], [
             'name.required' => 'Họ tên người nhận là bắt buộc.',
             'phone.required' => 'Số điện thoại nhận hàng là bắt buộc.',
@@ -102,6 +105,9 @@ class AddressController extends Controller
             'address' => $request->address,
             'badge' => $request->badge,
             'is_default' => $isDefault,
+            'province_id' => $request->province_id,
+            'district_id' => $request->district_id,
+            'ward_code' => $request->ward_code,
         ]);
 
         return response()->json([
@@ -156,6 +162,9 @@ class AddressController extends Controller
             'address' => 'required|string|max:500',
             'badge' => 'required|string|max:50',
             'is_default' => 'sometimes|boolean',
+            'province_id' => 'nullable|integer',
+            'district_id' => 'nullable|integer',
+            'ward_code' => 'nullable|string',
         ], [
             'name.required' => 'Họ tên người nhận là bắt buộc.',
             'phone.required' => 'Số điện thoại nhận hàng là bắt buộc.',
@@ -192,6 +201,9 @@ class AddressController extends Controller
             'address' => $request->address,
             'badge' => $request->badge,
             'is_default' => $isDefault,
+            'province_id' => $request->province_id ?? $address->province_id,
+            'district_id' => $request->district_id ?? $address->district_id,
+            'ward_code' => $request->ward_code ?? $address->ward_code,
         ]);
 
         return response()->json([

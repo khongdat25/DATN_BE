@@ -169,7 +169,7 @@ class ColorController extends Controller
             'message' => 'hiện đang có sản phẩm sử dụng màu sắc này, không thể xóa.',
         ], 400); 
         }
-        $color->delete();
+        Color::destroy($color->id);
          return response()->json([
             'success' => true,
             'message' => 'deleted',

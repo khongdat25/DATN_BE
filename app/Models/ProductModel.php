@@ -94,6 +94,11 @@ class ProductModel extends Model
         return $this->belongsTo(Brand::class);
     }
 
+    public function collections()
+    {
+        return $this->belongsToMany(Collection::class, 'collection_product', 'product_id', 'collection_id')->withTimestamps();
+    }
+
     protected $casts = [
         'images' => 'array',
         'is_featured' => 'boolean',

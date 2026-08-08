@@ -174,7 +174,7 @@ class BrandController extends Controller
             'message' => 'hiện đang có sản phẩm sthuộc thương hiệu này, không thể xóa.',
         ], 400); 
         }
-        $brand->delete();
+        Brand::destroy($brand->id);
          return response()->json([
             'success' => true,
             'message' => 'deleted',

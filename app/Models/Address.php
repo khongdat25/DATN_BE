@@ -18,6 +18,9 @@ class Address extends Model
         'address',
         'badge',
         'is_default',
+        'province_id',
+        'district_id',
+        'ward_code',
     ];
 
     protected $casts = [

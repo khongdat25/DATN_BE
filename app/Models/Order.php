@@ -15,6 +15,7 @@ class Order extends Model
         'user_id', 'name', 'email', 'phone', 'address', 'note',
         'total_amount', 'voucher_id', 'payment_method_id', 'payment_status', 'status',
         'cancel_reason', 'bank_name', 'bank_account_number', 'bank_account_name', 'refund_notes',
+        'ghn_order_code', 'province_id', 'district_id', 'ward_code', 'shipping_fee',
     ];
 
     public function items()

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AIChatController;
+use App\Http\Controllers\AdminAIController;
+use App\Http\Controllers\GHNController;
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -51,6 +53,13 @@ Route::get('/hotproducts', [ProductApi::class, 'HotProduct']);
 Route::get('/product/{slug}', [ProductApi::class, 'Detail']);
 Route::get('/search', [ProductApi::class, 'Search']);
 Route::post('/ai/chat', [AIChatController::class, 'chat']);
+
+// GHN Express API
+Route::get('/ghn/provinces', [GHNController::class, 'getProvinces']);
+Route::get('/ghn/districts', [GHNController::class, 'getDistricts']);
+Route::get('/ghn/wards', [GHNController::class, 'getWards']);
+Route::post('/ghn/calculate-fee', [GHNController::class, 'calculateFee']);
+Route::get('/ghn/tracking/{code}', [GHNController::class, 'trackGHNOrder']);
 
 // Tin tức (Blogs)
 Route::get('/blogs', [BlogController::class, 'index']);
@@ -172,6 +181,7 @@ Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
     // Quản lý đơn hàng (Orders) cho Admin
     Route::get('/orders', [OrderController::class, 'adminIndex']);
     Route::post('/orders/{id}/status', [OrderController::class, 'adminUpdateStatus']);
+    Route::post('/orders/{id}/push-ghn', [GHNController::class, 'pushOrderToGHN']);
     Route::delete('/orders/{id}', [OrderController::class, 'adminDestroy']);
 
     // Quản lý Vouchers (Admin)
@@ -196,6 +206,27 @@ Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
     Route::put('/banners/{id}', [BannerController::class, 'update']);
     Route::patch('/banners/{id}/toggle', [BannerController::class, 'toggleStatus']);
     Route::delete('/banners/{id}', [BannerController::class, 'destroy']);
+
+    // Quản lý Bộ sưu tập (Admin Collections)
+    Route::get('/collections', [\App\Http\Controllers\CollectionController::class, 'adminIndex']);
+    Route::post('/collections', [\App\Http\Controllers\CollectionController::class, 'store']);
+    Route::post('/collections/{id}', [\App\Http\Controllers\CollectionController::class, 'update']);
+    Route::patch('/collections/{id}/toggle', [\App\Http\Controllers\CollectionController::class, 'toggleStatus']);
+    Route::patch('/collections/{id}/toggle-featured', [\App\Http\Controllers\CollectionController::class, 'toggleFeatured']);
+    Route::delete('/collections/{id}', [\App\Http\Controllers\CollectionController::class, 'destroy']);
+
+    // Quản lý AI Assistant (Admin AI Management)
+    Route::get('/ai/stats', [AdminAIController::class, 'getStats']);
+    Route::get('/ai/settings', [AdminAIController::class, 'getSettings']);
+    Route::post('/ai/settings', [AdminAIController::class, 'updateSettings']);
+    Route::get('/ai/logs', [AdminAIController::class, 'getLogs']);
+    Route::get('/ai/suggestions', [AdminAIController::class, 'getSuggestions']);
+    Route::post('/ai/suggestions', [AdminAIController::class, 'updateSuggestions']);
 });
+
+// Bộ sưu tập công khai (Public Collections)
+Route::get('/collections', [\App\Http\Controllers\CollectionController::class, 'publicIndex']);
+Route::get('/collections/{slugOrId}', [\App\Http\Controllers\CollectionController::class, 'publicShow']);
+
 
 
