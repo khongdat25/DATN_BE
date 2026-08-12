@@ -98,7 +98,8 @@ DANH SÁCH SẢN PHẨM CỬA HÀNG:
 {$productListContext}
 
 QUY TẮC BẮT BUỘC:
-- Trả lời bằng tiếng Việt tự nhiên, lịch sự, thân thiện, dùng icon 👟✨.
+- Trả lời bằng tiếng Việt tự nhiên, lịch sự, thân thiện, sáng tạo và chuẩn phong cách Stylist thời trang, dùng icon 👟✨.
+- Nếu khách hỏi về concept chụp ảnh (ví dụ: chụp ảnh kỷ yếu học đường, phong cách học sinh cá biệt, phong cách Retro, Y2K, Streetwear, v.v.), hãy hào hứng tư vấn cách phối đồ và chọn mẫu giày cực ngầu phù hợp nhất với concept đó!
 - TUYỆT ĐỐI KHÔNG in mã ID sản phẩm, không in "Mã sản phẩm #XX", không in ký tự kỹ thuật thô vào câu trả lời với khách hàng.
 - Cuối câu trả lời, nếu có gợi ý sản phẩm cụ thể từ danh sách trên, thêm thẻ ẩn:
   [RECOMMENDED_PRODUCTS: id1, id2]
@@ -120,23 +121,25 @@ EOT;
 
         if (!empty($apiKey)) {
             try {
-                $models = ['gemini-3.6-flash', 'gemini-flash-latest'];
+                $models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-flash-latest'];
                 foreach ($models as $model) {
-                    $response = Http::withoutVerifying()->withHeaders([
-                        'Content-Type' => 'application/json',
-                    ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
-                        'contents' => [
-                            [
-                                'parts' => [
-                                    ['text' => $systemPrompt]
+                    $response = Http::withoutVerifying()
+                        ->timeout(120)
+                        ->withHeaders([
+                            'Content-Type' => 'application/json',
+                        ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                            'contents' => [
+                                [
+                                    'parts' => [
+                                        ['text' => $systemPrompt]
+                                    ]
                                 ]
+                            ],
+                            'generationConfig' => [
+                                'temperature' => (float)$temperature,
+                                'maxOutputTokens' => 2048,
                             ]
-                        ],
-                        'generationConfig' => [
-                            'temperature' => (float)$temperature,
-                            'maxOutputTokens' => 2048,
-                        ]
-                    ]);
+                        ]);
 
                     if ($response->successful()) {
                         $resData = $response->json();
@@ -228,52 +231,50 @@ EOT;
     }
 
     /**
-     * Hàm tự động tạo câu trả lời dự phòng bằng thuật toán quy tắc khi chưa có AI Key
+     * Hàm tự động tạo câu trả lời dự phòng bằng thuật toán quy tắc khi chưa có AI Key hoặc chờ phản hồi
      */
     private function generateFallbackReply(string $msg, mixed $products, array &$recIds)
     {
         $lower = mb_strtolower($msg, 'UTF-8');
 
-        // Check if asking about foot size (cm/mm)
-        if (preg_match('/(\d+(\.\d+)?)\s*(cm|mm)/i', $lower, $m)) {
-            $val = (float)$m[1];
-            if ($m[3] === 'mm') $val /= 10; // convert mm to cm
-
-            $size = 40;
-            if ($val <= 22.5) $size = 36;
-            elseif ($val <= 23.0) $size = 37;
-            elseif ($val <= 23.5) $size = 38;
-            elseif ($val <= 24.0) $size = 39;
-            elseif ($val <= 24.5) $size = 40;
-            elseif ($val <= 25.0) $size = 41;
-            elseif ($val <= 25.5) $size = 42;
-            elseif ($val <= 26.0) $size = 43;
-            else $size = 44;
-
-            $isWide = str_contains($lower, 'bè') || str_contains($lower, 'dày') || str_contains($lower, 'to');
-            $suggestedSize = $isWide ? ($size + 1) : $size;
-
+        // Check if asking about explicit shoe sizes (size 36 -> 46, cỡ 43, chân 43, mua 44, v.v.)
+        if (preg_match('/(size|cỡ|chân|mang|mua)\s*(\d{2})/i', $lower, $m) || preg_match('/(\d+(\.\d+)?)\s*(cm|mm)/i', $lower, $m)) {
             $recIds = $products->take(3)->pluck('id')->toArray();
 
-            return "Bảng quy đổi cho chiều dài chân **{$val} cm**:\n" .
-                   "- Size tiêu chuẩn phù hợp: **Size {$size} (EU)**\n" .
-                   ($isWide ? "- Vì bạn có dáng chân bè/dày, SaigonShoes khuyên bạn nên chọn **Size {$suggestedSize}** để đi êm chân và thoải mái nhất! 👟\n\n" : "- Nếu phom chân thon chuẩn, bạn mang Size {$size} vừa vặn nhé! 👟\n\n") .
-                   "Dưới đây là một số mẫu giày cực hot hợp với size của bạn:";
+            // Nếu người dùng nhắc đến tăng 1-2 size (ví dụ: cỡ 43 nhưng hay mua 44 hoặc 45)
+            if (str_contains($lower, '44') || str_contains($lower, '45') || str_contains($lower, 'tăng') || str_contains($lower, 'rộng')) {
+                return "👟 **Tư vấn chọn Size phù hợp cho phom chân của bạn:**\n\n" .
+                       "• **Phân tích:** Bạn có cỡ chân chuẩn **Size 43**, nhưng thói quen hay mua **Size 44** hoặc **Size 45** cho thấy bạn có dáng bàn chân bè ngang, mu bàn chân dày hoặc thích cảm giác mang rộng rãi thoải mái.\n" .
+                       "• **Lời khuyên từ SaigonShoes Stylist:**\n" .
+                       "  - Với các mẫu Sneaker phom ôm (như Nike Air Max, Jordan, Puma): Chọn **Size 44** là vừa vặn êm chân nhất.\n" .
+                       "  - Với các mẫu Chunky / Cổ cao (như MLB Chunky, High-top): Bạn có thể chọn **Size 44 hoặc 45** kèm lót giày êm để di chuyển thoải mái cả ngày!\n\n" .
+                       "Gợi ý một số mẫu Sneaker phom rộng êm chân cực hot bên dưới:";
+            }
+
+            $size = 42;
+            if (preg_match('/(\d{2})/', $lower, $sizeMatch)) {
+                $size = (int)$sizeMatch[1];
+            }
+
+            return "👟 **Tư vấn chọn Size cho chân {$size}:**\n\n" .
+                   "- **Size chuẩn khuyến nghị:** **Size {$size} (EU)**\n" .
+                   "- **Mẹo chọn Size:** Nếu dáng bàn chân của bạn bè ngang hoặc mu dày, bạn nên nhích lên 0.5 - 1 Size (**Size " . ($size + 1) . "**) để di chuyển thoải mái nhất!\n\n" .
+                   "Tham khảo ngay các mẫu giày hot đang có sẵn đủ Size tại SaigonShoes:";
         }
 
-        // Check if asking about Streetwear / Fashion Style
-        if (str_contains($lower, 'streetwear') || str_contains($lower, 'phối đồ') || str_contains($lower, 'phong cách') || str_contains($lower, 'đường phố')) {
+        // Check if asking about Concept Styling (Kỷ yếu, Học sinh cá biệt, Streetwear, Vintage)
+        if (str_contains($lower, 'kỷ yếu') || str_contains($lower, 'học đường') || str_contains($lower, 'cá biệt') || str_contains($lower, 'chụp ảnh') || str_contains($lower, 'streetwear') || str_contains($lower, 'phối đồ') || str_contains($lower, 'phong cách')) {
             $recIds = $products->take(3)->pluck('id')->toArray();
-            return "🔥 **Tư vấn Phong cách Streetwear Đẳng cấp từ SaigonShoes Stylist:**\n\n" .
-                   "• **Quần Cargo / Parachute & T-Shirt Oversize:** Phối cùng các dòng Chunky Sneaker hoặc Sneaker cổ cao (High-top) tạo phom dáng bụi bặm, hiện đại.\n" .
-                   "• **Jeans Ống Rộng (Wide-leg Jeans) & Hoodie:** Đi cùng Sneaker tone màu Trung tính (Trắng/Đen/Xám/Vintage) mang lại vẻ phóng khoáng cá tính.\n\n" .
-                   "Tham khảo ngay các mẫu giày Streetwear bán chạy nhất SaigonShoes bên dưới:";
+            return "🔥 **Tư vấn Phong cách Chụp ảnh Kỷ yếu Học đường Cá biệt cực chất:**\n\n" .
+                   "• **Concept Học sinh Cá biệt / Bad Boy học đường:** Bạn hãy phối đồng phục trường cởi 1-2 nút áo sơ mi, cà vạt nới lỏng hoặc xắn tay áo, kết hợp cùng **Sneaker Cổ cao (High-top)** màu đen/trắng hoặc **Chunky Sneaker hầm hố** để tạo phom dáng cực ngầu và bụi bặm.\n" .
+                   "• **Các mẫu Giày hợp Concept nhất:** Nike Air Force 1, Jordan 1 High, Converse Chuck 70 hoặc MLB Bigball Chunky mang lại diện mạo đầy cá tính lên ảnh kỷ yếu cực nổi bật!\n\n" .
+                   "Tham khảo ngay các mẫu giày đang bán chạy nhất SaigonShoes bên dưới:";
         }
 
         // Default friendly response
         $recIds = $products->take(2)->pluck('id')->toArray();
         return "Chào bạn! SaigonShoes AI luôn sẵn sàng hỗ trợ bạn 👟✨\n" .
-               "• Bạn có thể nhập chiều dài chân (ví dụ: *'chân dài 24.5cm bè ngang'*) để mình tính toán **Size chuẩn xác nhất**.\n" .
-               "• Hoặc yêu cầu tư vấn phối đồ phong cách (*'giày phong cách Streetwear'*, *'giày công sở'*...).";
+               "• Bạn có thể nhập chiều dài chân (ví dụ: *'chân 43 hay mua 44'*) để mình tư vấn **Size chuẩn xác nhất**.\n" .
+               "• Hoặc yêu cầu tư vấn phối đồ phong cách (*'giày phong cách học đường'*, *'giày Streetwear'*...).";
     }
 }

@@ -105,6 +105,8 @@ class OrderController extends Controller
             $order->payment_status = $request->payment_status;
         }
 
+
+
         DB::beginTransaction();
         try {
             $order->save();
@@ -252,6 +254,15 @@ class OrderController extends Controller
         DB::beginTransaction();
         try {
             $order->status = 'cancelled';
+
+            if (!empty($order->ghn_order_code)) {
+                try {
+                    $ghnController = new \App\Http\Controllers\GHNController();
+                    $ghnController->cancelGHNOrder($order->id);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::warning('Auto cancel GHN for user order exception: ' . $e->getMessage());
+                }
+            }
 
             if ($request->filled('reason')) {
                 $order->cancel_reason = $request->input('reason');

@@ -60,6 +60,7 @@ Route::get('/ghn/districts', [GHNController::class, 'getDistricts']);
 Route::get('/ghn/wards', [GHNController::class, 'getWards']);
 Route::post('/ghn/calculate-fee', [GHNController::class, 'calculateFee']);
 Route::get('/ghn/tracking/{code}', [GHNController::class, 'trackGHNOrder']);
+Route::get('/ghn/track/{code}', [GHNController::class, 'trackGHNOrder']);
 
 // Tin tức (Blogs)
 Route::get('/blogs', [BlogController::class, 'index']);
@@ -182,6 +183,7 @@ Route::middleware(['auth:api', 'admin'])->prefix('admin')->group(function () {
     Route::get('/orders', [OrderController::class, 'adminIndex']);
     Route::post('/orders/{id}/status', [OrderController::class, 'adminUpdateStatus']);
     Route::post('/orders/{id}/push-ghn', [GHNController::class, 'pushOrderToGHN']);
+    Route::post('/orders/{id}/cancel-ghn', [GHNController::class, 'cancelGHNOrder']);
     Route::delete('/orders/{id}', [OrderController::class, 'adminDestroy']);
 
     // Quản lý Vouchers (Admin)
