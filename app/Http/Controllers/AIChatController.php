@@ -121,7 +121,12 @@ EOT;
 
         if (!empty($apiKey)) {
             try {
-                $models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-flash-latest'];
+                $models = [
+                    'gemini-3.5-flash',
+                    'gemini-3.6-flash',
+                    'gemini-3.1-flash-lite',
+                    'gemini-flash-lite-latest'
+                ];
                 foreach ($models as $model) {
                     $response = Http::withoutVerifying()
                         ->timeout(120)
@@ -237,7 +242,31 @@ EOT;
     {
         $lower = mb_strtolower($msg, 'UTF-8');
 
-        // Check if asking about explicit shoe sizes (size 36 -> 46, cỡ 43, chân 43, mua 44, v.v.)
+        // 1. Kiểm tra nếu khách hỏi về bảo vệ tốt nghiệp / trang phục công sở / sơ mi / quần tây / đi làm / lễ tốt nghiệp / phỏng vấn
+        if (
+            str_contains($lower, 'tốt nghiệp') || 
+            str_contains($lower, 'bảo vệ') || 
+            str_contains($lower, 'sơ mi') || 
+            str_contains($lower, 'quần tây') || 
+            str_contains($lower, 'quần âu') || 
+            str_contains($lower, 'vest') || 
+            str_contains($lower, 'công sở') || 
+            str_contains($lower, 'phỏng vấn') || 
+            str_contains($lower, 'lịch sự') ||
+            str_contains($lower, 'trang trọng') ||
+            (str_contains($lower, 'mặc') && (str_contains($lower, 'trắng') || str_contains($lower, 'đen')))
+        ) {
+            $recIds = $products->take(3)->pluck('id')->toArray();
+            return "🎓 **Tư vấn phối giày đi Bảo vệ Tốt nghiệp / Trang phục Lịch sự (Sơ mi trắng + Quần tây đen):**\n\n" .
+                   "• **Lựa chọn 1: Sneaker Trắng Tối Giản (Minimalist White Leather Sneaker)**\n" .
+                   "  - Tạo phong cách trẻ trung, năng động nhưng vẫn cực kỳ chỉn chu, hiện đại. Thích hợp cho sinh viên vừa muốn thoải mái vừa ghi điểm lịch sự trước Hội đồng.\n\n" .
+                   "• **Lựa chọn 2: Giày Tây Loafer / Derby Da Đen**\n" .
+                   "  - Mang lại vẻ ngoài chững chạc, chuyên nghiệp và chuẩn quý ông 100% khi kết hợp với áo sơ mi trắng đóng thùng quần tây đen.\n\n" .
+                   "• **Mẹo Stylist từ SaigonShoes:** Tránh chọn các đôi giày thể thao hầm hố có phối màu neon quá sặc sỡ để outfit bảo vệ tốt nghiệp chuẩn chỉnh nhất!\n\n" .
+                   "Tham khảo ngay một số mẫu giày hợp outfit sơ mi & quần tây nhất bên dưới:";
+        }
+
+        // 2. Check if asking about explicit shoe sizes (size 36 -> 46, cỡ 43, chân 43, mua 44, v.v.)
         if (preg_match('/(size|cỡ|chân|mang|mua)\s*(\d{2})/i', $lower, $m) || preg_match('/(\d+(\.\d+)?)\s*(cm|mm)/i', $lower, $m)) {
             $recIds = $products->take(3)->pluck('id')->toArray();
 
@@ -262,12 +291,12 @@ EOT;
                    "Tham khảo ngay các mẫu giày hot đang có sẵn đủ Size tại SaigonShoes:";
         }
 
-        // Check if asking about Concept Styling (Kỷ yếu, Học sinh cá biệt, Streetwear, Vintage)
-        if (str_contains($lower, 'kỷ yếu') || str_contains($lower, 'học đường') || str_contains($lower, 'cá biệt') || str_contains($lower, 'chụp ảnh') || str_contains($lower, 'streetwear') || str_contains($lower, 'phối đồ') || str_contains($lower, 'phong cách')) {
+        // 3. Check if asking about Concept Styling (Kỷ yếu, Học sinh cá biệt, Streetwear, Vintage)
+        if (str_contains($lower, 'kỷ yếu') || str_contains($lower, 'học đường') || str_contains($lower, 'cá biệt') || str_contains($lower, 'chụp ảnh') || str_contains($lower, 'streetwear') || str_contains($lower, 'phối đồ') || str_contains($lower, 'phong cách') || str_contains($lower, 'mặc') || str_contains($lower, 'mang')) {
             $recIds = $products->take(3)->pluck('id')->toArray();
-            return "🔥 **Tư vấn Phong cách Chụp ảnh Kỷ yếu Học đường Cá biệt cực chất:**\n\n" .
-                   "• **Concept Học sinh Cá biệt / Bad Boy học đường:** Bạn hãy phối đồng phục trường cởi 1-2 nút áo sơ mi, cà vạt nới lỏng hoặc xắn tay áo, kết hợp cùng **Sneaker Cổ cao (High-top)** màu đen/trắng hoặc **Chunky Sneaker hầm hố** để tạo phom dáng cực ngầu và bụi bặm.\n" .
-                   "• **Các mẫu Giày hợp Concept nhất:** Nike Air Force 1, Jordan 1 High, Converse Chuck 70 hoặc MLB Bigball Chunky mang lại diện mạo đầy cá tính lên ảnh kỷ yếu cực nổi bật!\n\n" .
+            return "🔥 **Tư vấn Phong cách Thời trang & Phối đồ cực chất:**\n\n" .
+                   "• **Phong cách Streetwear / Năng động:** Phối quần Jean/Cargo cùng **Sneaker Cổ cao (High-top)** hoặc **Chunky Sneaker** hầm hố để tạo phom dáng nổi bật và cực ngầu.\n" .
+                   "• **Phong cách Smart Casual / Lịch sự:** Phối Quần Tây / Chino cùng **Sneaker Trắng cổ thấp** hoặc **Giày Loafer** thanh lịch.\n\n" .
                    "Tham khảo ngay các mẫu giày đang bán chạy nhất SaigonShoes bên dưới:";
         }
 
@@ -275,6 +304,6 @@ EOT;
         $recIds = $products->take(2)->pluck('id')->toArray();
         return "Chào bạn! SaigonShoes AI luôn sẵn sàng hỗ trợ bạn 👟✨\n" .
                "• Bạn có thể nhập chiều dài chân (ví dụ: *'chân 43 hay mua 44'*) để mình tư vấn **Size chuẩn xác nhất**.\n" .
-               "• Hoặc yêu cầu tư vấn phối đồ phong cách (*'giày phong cách học đường'*, *'giày Streetwear'*...).";
+               "• Hoặc yêu cầu tư vấn phối đồ phong cách (*'mặc sơ mi trắng mang giày gì'*, *'giày phong cách Streetwear'*...).";
     }
 }

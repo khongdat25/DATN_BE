@@ -33,6 +33,11 @@ class Order extends Model
         return $this->belongsTo(Voucher::class, 'voucher_id');
     }
 
+    public function paymentMethod()
+    {
+        return $this->belongsTo(PaymentMethod::class, 'payment_method_id');
+    }
+
     public function histories()
     {
         return $this->hasMany(OrderHistory::class, 'order_id')->orderBy('created_at', 'desc');

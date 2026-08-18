@@ -276,6 +276,7 @@ class GHNController extends Controller
                     'Token' => $config['token'],
                     'ShopId' => (string) $config['shop_id'],
                 ])->post($config['url'] . 'v2/shipping-order/create', [
+                    'client_order_code' => '#SGS-' . $order->id,
                     'payment_type_id' => 1, // Bên gửi trả phí
                     'note' => $order->note ?? 'Hàng dễ vỡ, xin nhẹ tay',
                     'required_note' => 'KHONGCHOXEMHANG',
@@ -304,31 +305,14 @@ class GHNController extends Controller
             if ($response->successful() && isset($resJson['code']) && $resJson['code'] === 200 && isset($resJson['data']['order_code'])) {
                 $ghnOrderCode = $resJson['data']['order_code'];
 
-                // Cập nhật thông tin đơn hàng với mã vận đơn GHN
+                // Cập nhật thông tin đơn hàng với mã vận đơn GHN thật
                 $order->ghn_order_code = $ghnOrderCode;
                 $order->status = 'shipping';
                 $order->save();
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Đã gửi đơn thành công sang Giao Hàng Nhanh (GHN Sandbox)!',
-                    'ghn_order_code' => $ghnOrderCode,
-                    'tracking_url' => 'https://donhang.ghn.vn/?order_code=' . $ghnOrderCode,
-                ], 200);
-            }
-
-            // Nếu ở môi trường Sandbox thử nghiệm, cho phép tự động sinh mã Sandbox DEV-GHN-xxx nếu API Sandbox trả lỗi
-            if ($config['env'] === 'sandbox') {
-                $randomStr = strtoupper(substr(md5(time() . $order->id), 0, 6));
-                $ghnOrderCode = 'DEV-GHN-' . $randomStr;
-
-                $order->ghn_order_code = $ghnOrderCode;
-                $order->status = 'shipping';
-                $order->save();
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Đã tạo vận đơn thử nghiệm Sandbox GHN (không điều shipper thật)!',
+                    'message' => 'Đã tạo vận đơn GHN thành công!',
                     'ghn_order_code' => $ghnOrderCode,
                     'tracking_url' => 'https://donhang.ghn.vn/?order_code=' . $ghnOrderCode,
                 ], 200);
@@ -344,22 +328,6 @@ class GHNController extends Controller
 
         } catch (\Exception $e) {
             Log::error('GHN pushOrderToGHN Exception: ' . $e->getMessage());
-
-            if ($config['env'] === 'sandbox') {
-                $randomStr = strtoupper(substr(md5(time() . $order->id), 0, 6));
-                $ghnOrderCode = 'DEV-GHN-' . $randomStr;
-
-                $order->ghn_order_code = $ghnOrderCode;
-                $order->status = 'shipping';
-                $order->save();
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Đã tạo vận đơn thử nghiệm Sandbox GHN (không điều shipper thật)!',
-                    'ghn_order_code' => $ghnOrderCode,
-                    'tracking_url' => 'https://donhang.ghn.vn/?order_code=' . $ghnOrderCode,
-                ], 200);
-            }
 
             return response()->json([
                 'success' => false,

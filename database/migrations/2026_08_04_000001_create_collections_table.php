@@ -32,11 +32,12 @@ return new class extends Migration
 
         Schema::create('collection_product', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('collection_id');
-            $table->unsignedBigInteger('product_id');
+            $table->foreignId('collection_id')->constrained('collections')->onDelete('cascade');
+            $table->integer('product_id');
             $table->timestamps();
 
             $table->index(['collection_id', 'product_id']);
+            $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
         });
     }
 
