@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\ProductModel;
+use App\Models\Product;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -42,7 +42,7 @@ class DashboardController extends Controller
         $customersCount = User::query()->where('role', '=', 'user', 'and')->count('*');
 
         // 4. Tổng số lượng sản phẩm trong kho
-        $productsCount = ProductModel::query()->count('*');
+        $productsCount = Product::query()->count('*');
 
         // 5. Top sản phẩm bán chạy (Chỉ thống kê từ các đơn hàng đã thanh toán & hoàn thành)
         $bestSellersRaw = DB::table('order_item')

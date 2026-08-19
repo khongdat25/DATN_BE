@@ -14,13 +14,14 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\flashsale;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\ProductApi;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SizeController;
 use App\Http\Controllers\ColorController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\BannerController;
+use App\Http\Controllers\ReceiptController;
 use App\Models\Order;
 use App\Models\ProductModel;
 use App\Models\User;
@@ -38,20 +39,23 @@ use Illuminate\Support\Facades\Route;
 | routes are loaded by the RouteServiceProvider and all of them will
 | be assigned to the "api" middleware group. Make something great!
 |
-*/ /*crud flashsale cần sửa */
+*/ /*test */
+
+route::post('/update-stock', [ReceiptController::class, 'updateStock']);
+route::get('/stock-log/{id}', [ReceiptController::class, 'checkReceipts']);
 
 // lấy tên brand + category
-Route::get('/getbrands', [ProductApi::class, 'getBrands']);
-Route::get('/getcategories', [ProductApi::class, 'getCategories']);
+Route::get('/getbrands', [ProductController::class, 'getBrands']);
+Route::get('/getcategories', [ProductController::class, 'getCategories']);
 // sản phẩm
-Route::get('/products', [ProductApi::class, 'index']);
+Route::get('/products', [ProductController::class, 'index']);
 Route::get('/banner', [BannerController::class, 'publicIndex']);
-Route::get('/categories', [ProductApi::class, 'HotCategories']);
-Route::get('/flashsales', [ProductApi::class, 'FlashSale']);
-Route::get('/bestsellings', [ProductApi::class, 'BestSelling']);
-Route::get('/hotproducts', [ProductApi::class, 'HotProduct']);
-Route::get('/product/{slug}', [ProductApi::class, 'Detail']);
-Route::get('/search', [ProductApi::class, 'Search']);
+Route::get('/categories', [ProductController::class, 'HotCategories']);
+Route::get('/flashsales', [ProductController::class, 'FlashSale']);
+Route::get('/bestsellings', [ProductController::class, 'BestSelling']);
+Route::get('/hotproducts', [ProductController::class, 'HotProduct']);
+Route::get('/product/{slug}', [ProductController::class, 'Detail']);
+Route::get('/search', [ProductController::class, 'Search']);
 Route::post('/ai/chat', [AIChatController::class, 'chat']);
 
 // GHN Express API
@@ -118,14 +122,14 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/ratings', [RatingController::class, 'store']);
 
     // Quản lý Sản phẩm (Admin Products)
-    Route::get('/adminproduct', [ProductApi::class, 'admin_product']);
-    Route::post('/product_add', [ProductApi::class, 'product_add']);
-    Route::post('/product_edit/{id}', [ProductApi::class, 'product_edit']);
-    Route::post('/product_import_excel', [ProductApi::class, 'importExcel']);
-    Route::patch('/product/toggle-featured/{id}', [ProductApi::class, 'toggleFeatured']);
-    Route::delete('/product/{id}', [ProductApi::class, 'product_delete']);
-    Route::delete('/variant/{v}', [ProductApi::class, 'variant_delete']);
-    Route::post('/upload', [ProductApi::class, 'uploadImage']);
+    Route::get('/adminproduct', [ProductController::class, 'admin_product']);
+    Route::post('/product_add', [ProductController::class, 'product_add']);
+    Route::post('/product_edit/{id}', [ProductController::class, 'product_edit']);
+    Route::post('/product_import_excel', [ProductController::class, 'importExcel']);
+    Route::patch('/product/toggle-featured/{id}', [ProductController::class, 'toggleFeatured']);
+    Route::delete('/product/{id}', [ProductController::class, 'product_delete']);
+    Route::delete('/variant/{v}', [ProductController::class, 'variant_delete']);
+    Route::post('/upload', [ProductController::class, 'uploadImage']);
 
     // Quản lý Size (Admin & Management)
     Route::get('/size', [SizeController::class, 'index']);
