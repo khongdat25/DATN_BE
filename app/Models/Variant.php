@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\ProductModel;
+use App\Models\Product;
 use App\Models\Size;
 use App\Models\Color;
 
@@ -32,7 +32,7 @@ class Variant extends Model
 
     public function product()
     {
-        return $this->belongsTo(ProductModel::class, 'product_id');
+        return $this->belongsTo(ProductM::class, 'product_id');
     }
 
     public function size()

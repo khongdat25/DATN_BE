@@ -6,7 +6,7 @@ use App\Models\Banners;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Flashsale;
-use App\Models\ProductModel;
+use App\Models\Product;
 use App\Models\Variant;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -25,7 +25,7 @@ class ProductApi extends Controller
      */
     public function index()
     {
-        $products = ProductModel::query()->with([
+        $products = Product::query()->with([
             'variants:id,product_id,size_id,color_id,sku,stock,price,sale,image',
             'brand:id,name',
             'category:id,name',
@@ -163,7 +163,7 @@ class ProductApi extends Controller
      */
     public function BestSelling()
     {
-        $products = ProductModel::query()->where(['status' => 1])
+        $products = Product::query()->where(['status' => 1])
             ->with([
                 'variants:product_id,image,price,sale',
                 'category:id,name',
@@ -191,7 +191,7 @@ class ProductApi extends Controller
      */
     public function HotProduct()
     {
-        $products = ProductModel::query()
+        $products = Product::query()
             ->where('is_featured', 1)
             ->where('status', 1)
             ->with(['brand:id,name',
@@ -224,7 +224,7 @@ class ProductApi extends Controller
     public function Detail(string $slug)
     {
         // Nếu tham số là số nguyên → tìm theo id, ngược lại tìm theo slug
-        $query = ProductModel::query()->with([
+        $query = Product::query()->with([
             'brand:id,name',
             'variants:id,product_id,image,price,sale,stock,color_id,size_id',
             'category:id,name',
@@ -247,7 +247,7 @@ class ProductApi extends Controller
             return response()->json(['success' => false, 'message' => 'no product found'], 404);
         }
 
-        $related = ProductModel::query()->where([['id', '!=', $product->id]])
+        $related = Product::query()->where([['id', '!=', $product->id]])
             ->where(['category_id' => $product->category_id])
             ->limit(4)
             ->with([
@@ -294,7 +294,7 @@ class ProductApi extends Controller
      */
     public function Search(Request $request)
     {
-        $products = ProductModel::query()
+        $products = Product::query()
             ->select(['id', 'name', 'slug', 'sold', 'category_id', 'brand_id', 'images'])
             ->with([
                 'variants:id,product_id,size_id,color_id,sku,stock,price,sale,image',
@@ -379,7 +379,7 @@ class ProductApi extends Controller
      */
     public function admin_product(Request $request)
     {
-        $products = ProductModel::query()
+        $products = Product::query()
             ->with([
                 'variants:id,product_id,size_id,color_id,sku,stock,price,sale,image',
                 'variants.color:id,name',
@@ -438,7 +438,7 @@ class ProductApi extends Controller
      */
     public function product_delete(int $id)
     {
-        $product = ProductModel::find($id, ['*']);
+        $product = Product::find($id, ['*']);
         if (! $product) {
             return response()->json(['success' => false, 'message' => 'no product found'], 404);
         }
@@ -558,7 +558,7 @@ class ProductApi extends Controller
         DB::beginTransaction();
 
         try {
-            $product = ProductModel::create([
+            $product = Product::create([
                 'name' => $request->name,
                 'slug' => Str::slug($request->name),
                 'category_id' => $request->category_id,
@@ -644,7 +644,7 @@ class ProductApi extends Controller
             'variants' => 'required|array',
             'images' => 'nullable|array',
         ]);
-        $product = ProductModel::find($id, ['*']);
+        $product = Product::find($id, ['*']);
         if (! $product) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy sản phẩm!'], 404);
         }
@@ -836,7 +836,7 @@ class ProductApi extends Controller
      */
     public function toggleFeatured(int $id)
     {
-        $product = ProductModel::find($id, ['*']);
+        $product = Product::find($id, ['*']);
         if (! $product) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy sản phẩm!'], 404);
         }
@@ -906,7 +906,7 @@ class ProductApi extends Controller
 
                 $images = isset($prodData['images']) && is_array($prodData['images']) ? $prodData['images'] : [];
 
-                $product = ProductModel::create([
+                $product = Product::create([
                     'name' => $name,
                     'slug' => Str::slug($name) . '-' . Str::random(4),
                     'category_id' => $prodData['category_id'],
@@ -986,4 +986,6 @@ class ProductApi extends Controller
             ], 500);
         }
     }
+
+
 }
