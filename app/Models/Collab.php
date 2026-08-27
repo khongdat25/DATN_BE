@@ -13,6 +13,6 @@ class Collab extends Model
 
     public function products()
     {
-        return $this->hasMany(ProductModel::class);
+        return $this->hasMany(Product::class);
     }
 }

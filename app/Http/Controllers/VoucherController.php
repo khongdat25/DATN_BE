@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Variant;
 use App\Models\Voucher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -68,9 +69,24 @@ class VoucherController extends Controller
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'status' => 'required|in:active,upcoming,expired',
+        ], [
+            'code.unique' => 'Mã Code Voucher này đã tồn tại trong cơ sở dữ liệu! Vui lòng đổi thành mã khác.',
+            'end_date.after_or_equal' => 'Ngày hết hạn phải lớn hơn hoặc bằng ngày bắt đầu.',
         ]);
 
         $voucher = Voucher::create($validated);
+
+        // Send notification to all users
+        try {
+            \App\Http\Controllers\NotificationController::sendToAllUsers(
+                "🎁 Mã quà tặng mới: {$voucher->code}",
+                "Mã {$voucher->code} ({$voucher->name}) vừa được phát hành! Nhanh tay săn ngay tại giỏ hàng.",
+                "voucher",
+                "/cart"
+            );
+        } catch (\Exception $e) {
+            // Ignore notification error
+        }
 
         return response()->json(['success' => true, 'data' => $voucher], 201);
     }
@@ -195,11 +211,19 @@ class VoucherController extends Controller
             ->get();
 
         if ($user) {
-            $usedVoucherIds = \App\Models\Order::where('user_id', '=', $user->id, 'and')
+            $usedOrderVoucherIds = \App\Models\Order::where('user_id', '=', $user->id, 'and')
                 ->whereNotNull('voucher_id')
                 ->where('status', '!=', 'cancelled', 'and')
                 ->pluck('voucher_id')
                 ->toArray();
+
+            $usedShippingVoucherIds = \App\Models\Order::where('user_id', '=', $user->id, 'and')
+                ->whereNotNull('shipping_voucher_id')
+                ->where('status', '!=', 'cancelled', 'and')
+                ->pluck('shipping_voucher_id')
+                ->toArray();
+
+            $usedVoucherIds = array_unique(array_merge($usedOrderVoucherIds, $usedShippingVoucherIds));
 
             $vouchers = $vouchers->filter(function ($voucher) use ($usedVoucherIds) {
                 return ! in_array($voucher->id, $usedVoucherIds);
@@ -236,6 +260,9 @@ class VoucherController extends Controller
             'code' => 'required|string',
             'subtotal' => 'required|numeric',
             'shipping_fee' => 'sometimes|numeric|min:0',
+            'has_flash_sale' => 'sometimes|boolean',
+            'variant_id' => 'sometimes|nullable|integer',
+            'cart_item_ids' => 'sometimes|nullable|array',
         ]);
 
         $voucher = Voucher::where('code', '=', $request->code, 'and')->first();
@@ -259,13 +286,44 @@ class VoucherController extends Controller
         $user = $request->user();
         if ($user) {
             $alreadyUsed = \App\Models\Order::where('user_id', '=', $user->id, 'and')
-                ->where('voucher_id', '=', $voucher->id, 'and')
                 ->where('status', '!=', 'cancelled', 'and')
+                ->where(function ($q) use ($voucher) {
+                    $q->where('voucher_id', '=', $voucher->id, 'and')
+                      ->orWhere('shipping_voucher_id', '=', $voucher->id, 'and');
+                }, null, null, 'and')
                 ->exists();
 
             if ($alreadyUsed) {
                 return response()->json(['success' => false, 'message' => 'Bạn đã sử dụng mã giảm giá này rồi'], 400);
             }
+        }
+
+        // Kiểm tra xem đơn hàng có chứa sản phẩm Flash Sale hay không
+        $hasFlashSaleItems = $request->boolean('has_flash_sale');
+        if (! $hasFlashSaleItems) {
+            $variantIds = [];
+            if ($request->filled('variant_id')) {
+                $variantIds[] = (int) $request->variant_id;
+            } elseif ($request->filled('cart_item_ids')) {
+                $cartItemIds = is_array($request->cart_item_ids) ? $request->cart_item_ids : explode(',', $request->cart_item_ids);
+                $variantIds = \App\Models\Cart::whereIn('id', $cartItemIds, 'and', false)->pluck('variant_id')->filter()->toArray();
+            }
+            if (! empty($variantIds)) {
+                $now = Carbon::now();
+                $hasFlashSaleItems = Variant::whereIn('id', $variantIds, 'and', false)
+                    ->whereHas('flashSale', function ($q) use ($now) {
+                        $q->where('status', '=', 1, 'and')
+                          ->where('start_time', '<=', $now, 'and')
+                          ->where('end_time', '>=', $now, 'and');
+                    })->exists();
+            }
+        }
+
+        if ($hasFlashSaleItems && $voucher->type !== 'free_ship') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đơn hàng chứa sản phẩm Flash Sale chỉ được áp dụng mã miễn phí vận chuyển!',
+            ], 400);
         }
 
         if ($request->subtotal < $voucher->min_order) {

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Flashsale as flash;
-use App\Models\Flashsaleitem;
+use App\Models\Variant;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,26 +24,22 @@ class flashsale extends Controller
     {
         $now = Carbon::now();
         flash::query()
-            ->where('status', '!=', 3)
-            ->where('end_time', '<', $now)
+            ->where('status', '!=', 3, 'and')
+            ->where('end_time', '<', $now, 'and')
             ->update(['status' => 3]);
 
         $data = flash::query()
-            ->withCount(['items as total']);
+            ->withCount(['variants as total']);
 
         if ($request->filled('status')) {
-            $data->where('status', $request->status);
+            $data->where('status', '=', $request->status, 'and');
         }
 
         $sale = $data->with([
-            'items' => function($q) {
-                $q->select('id', 'flash_sale_id', 'product_id', 'variant_id', 'discount_value', 'quantity_limit', 'sold');
-            },
-            'items.product',
-            'items.product.variants',
-            'items.variant',
-            'items.variant.size',
-            'items.variant.color'
+            'variants',
+            'variants.product',
+            'variants.size',
+            'variants.color'
         ])
         ->orderBy('id', 'desc')
         ->get(['id', 'name', 'start_time', 'end_time', 'status']); 
@@ -68,7 +64,7 @@ class flashsale extends Controller
     public function destroy(int $id)
     {
         $flash = flash::findOrFail($id);
-        $flash->items()->delete();
+        Variant::where('flash_sale_id', '=', $flash->id, 'and')->update(['flash_sale_id' => null, 'sale_price' => null]);
         $flash->delete();
 
         return response()->json([
@@ -132,23 +128,27 @@ class flashsale extends Controller
 
             if ($request->filled('items') && is_array($request->items)) {
                 foreach ($request->items as $item) {
-                    Flashsaleitem::create([
-                        'flash_sale_id'  => $create->id,
-                        'product_id'     => $item['product_id'],
-                        'variant_id'     => $item['variant_id'] ?? null,
-                        'discount_value' => $request->discount_value,
-                        'quantity_limit' => $request->quantity_limit,
-                    ]);
+                    if (!empty($item['variant_id'])) {
+                        $v = Variant::where('id', '=', $item['variant_id'], 'and')->first();
+                        if ($v) {
+                            $calcSale = $request->discount_value < 1 ? $v->price * (1 - $request->discount_value) : $v->price * (1 - $request->discount_value / 100);
+                            $v->update([
+                                'flash_sale_id' => $create->id,
+                                'sale_price' => $calcSale
+                            ]);
+                        }
+                    }
                 }
             } elseif ($request->filled('product_ids') && is_array($request->product_ids)) {
                 foreach ($request->product_ids as $pId) {
-                    Flashsaleitem::create([
-                        'flash_sale_id'  => $create->id,
-                        'product_id'     => $pId,
-                        'variant_id'     => null,
-                        'discount_value' => $request->discount_value,
-                        'quantity_limit' => $request->quantity_limit,
-                    ]);
+                    $variants = Variant::where('product_id', '=', $pId, 'and')->get();
+                    foreach ($variants as $v) {
+                        $calcSale = $request->discount_value < 1 ? $v->price * (1 - $request->discount_value) : $v->price * (1 - $request->discount_value / 100);
+                        $v->update([
+                            'flash_sale_id' => $create->id,
+                            'sale_price' => $calcSale
+                        ]);
+                    }
                 }
             }
 
@@ -227,27 +227,32 @@ class flashsale extends Controller
                 'start_time' => $startedTime,
                 'end_time'   => $endTime,
             ]);
-            Flashsaleitem::query()->where('flash_sale_id', $flashSale->id)->delete();
+
+            Variant::where('flash_sale_id', '=', $flashSale->id, 'and')->update(['flash_sale_id' => null, 'sale_price' => null]);
 
             if ($request->filled('items') && is_array($request->items)) {
                 foreach ($request->items as $item) {
-                    Flashsaleitem::create([
-                        'flash_sale_id'  => $flashSale->id,
-                        'product_id'     => $item['product_id'],
-                        'variant_id'     => $item['variant_id'] ?? null,
-                        'discount_value' => $request->discount_value,
-                        'quantity_limit' => $request->quantity_limit,
-                    ]);
+                    if (!empty($item['variant_id'])) {
+                        $v = Variant::where('id', '=', $item['variant_id'], 'and')->first();
+                        if ($v) {
+                            $calcSale = $request->discount_value < 1 ? $v->price * (1 - $request->discount_value) : $v->price * (1 - $request->discount_value / 100);
+                            $v->update([
+                                'flash_sale_id' => $flashSale->id,
+                                'sale_price' => $calcSale
+                            ]);
+                        }
+                    }
                 }
             } elseif ($request->filled('product_ids') && is_array($request->product_ids)) {
                 foreach ($request->product_ids as $pId) {
-                    Flashsaleitem::create([
-                        'flash_sale_id'  => $flashSale->id,
-                        'product_id'     => $pId,
-                        'variant_id'     => null,
-                        'discount_value' => $request->discount_value,
-                        'quantity_limit' => $request->quantity_limit,
-                    ]);
+                    $variants = Variant::where('product_id', '=', $pId, 'and')->get();
+                    foreach ($variants as $v) {
+                        $calcSale = $request->discount_value < 1 ? $v->price * (1 - $request->discount_value) : $v->price * (1 - $request->discount_value / 100);
+                        $v->update([
+                            'flash_sale_id' => $flashSale->id,
+                            'sale_price' => $calcSale
+                        ]);
+                    }
                 }
             }
 

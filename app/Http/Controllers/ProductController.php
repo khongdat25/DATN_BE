@@ -13,7 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-class ProductApi extends Controller
+class ProductController extends Controller
 {
     /**
      * @OA\Get(
@@ -25,13 +25,17 @@ class ProductApi extends Controller
      */
     public function index()
     {
-        $products = Product::query()->with([
-            'variants:id,product_id,size_id,color_id,sku,stock,price,sale,image',
-            'brand:id,name',
-            'category:id,name',
-        ])
+        $products = Product::query()
+            ->where(function($q) {
+                $q->where('status', 1)->orWhereNull('status');
+            })
+            ->with([
+                'variants:id,product_id,size_id,color_id,sku,stock,price,sale_price,image',
+                'brand:id,name',
+                'category:id,name',
+            ])
             ->withAvg('rating as avg_rating', 'rating')
-            ->get(['id', 'slug', 'name', 'sold', 'brand_id', 'category_id', 'images']);
+            ->get(['id', 'slug', 'name', 'sold', 'brand_id', 'category_id', 'images', 'status']);
 
         return response()->json(
             [
@@ -127,17 +131,16 @@ class ProductApi extends Controller
         $now = Carbon::now();
 
         Flashsale::query()
-            ->where('status', '!=', 3)
-            ->where('end_time', '<', $now)
+            ->where('status', '!=', 3, 'and')
+            ->where('end_time', '<', $now, 'and')
             ->update(['status' => 3]);
 
         $flashSales = Flashsale::query()
             ->with([
-                'items' => function ($q) {
-                    $q->select('id', 'flash_sale_id', 'product_id', 'variant_id', 'discount_value', 'quantity_limit', 'sold');
-                },
-                'items.product:id,name,slug,category_id,brand_id,images',
-                'items.product.variants:id,product_id,size_id,color_id,sku,stock,price,sale,image',
+                'variants:id,product_id,size_id,color_id,sku,stock,price,sale_price,image,flash_sale_id',
+                'variants.product:id,name,slug,category_id,brand_id,images',
+                'variants.size:id,name',
+                'variants.color:id,name',
             ])
             ->where('status', 1)
             ->where('start_time', '<=', $now)
@@ -165,7 +168,7 @@ class ProductApi extends Controller
     {
         $products = Product::query()->where(['status' => 1])
             ->with([
-                'variants:product_id,image,price,sale',
+                'variants:product_id,image,price,sale_price',
                 'category:id,name',
             ])
             ->withAvg('rating as avg_rating', 'rating')
@@ -195,7 +198,7 @@ class ProductApi extends Controller
             ->where('is_featured', 1)
             ->where('status', 1)
             ->with(['brand:id,name',
-                'variants:product_id,size_id,price,sale',
+                'variants:product_id,size_id,price,sale_price',
                 'variants.size:id,name',
                 'category:id,name',
             ])
@@ -226,15 +229,15 @@ class ProductApi extends Controller
         // Nếu tham số là số nguyên → tìm theo id, ngược lại tìm theo slug
         $query = Product::query()->with([
             'brand:id,name',
-            'variants:id,product_id,image,price,sale,stock,color_id,size_id',
+            'variants:id,product_id,image,price,sale_price,stock,color_id,size_id',
             'category:id,name',
             'variants.color:id,name',
             'variants.size:id,name',
             'rating' => function ($rq) {
                 $rq->where('status', '!=', 'hidden')
-                   ->select('id', 'product_id', 'rating', 'comment', 'reply', 'created_at', 'user_id');
+                   ->select('id', 'product_id', 'rating', 'comment', 'reply', 'images', 'created_at', 'user_id');
             },
-            'rating.user:id,name',
+            'rating.user:id,name,avatar',
         ]);
 
         if (ctype_digit($slug)) {
@@ -251,7 +254,7 @@ class ProductApi extends Controller
             ->where(['category_id' => $product->category_id])
             ->limit(4)
             ->with([
-                'variants:product_id,size_id,color_id,sku,stock,price,sale,image',
+                'variants:product_id,size_id,color_id,sku,stock,price,sale_price,image',
                 'brand:id,name',
                 'category:id,name',
             ])
@@ -295,9 +298,12 @@ class ProductApi extends Controller
     public function Search(Request $request)
     {
         $products = Product::query()
-            ->select(['id', 'name', 'slug', 'sold', 'category_id', 'brand_id', 'images'])
+            ->where(function($q) {
+                $q->where('status', 1)->orWhereNull('status');
+            })
+            ->select(['id', 'name', 'slug', 'sold', 'category_id', 'brand_id', 'images', 'status'])
             ->with([
-                'variants:id,product_id,size_id,color_id,sku,stock,price,sale,image',
+                'variants:id,product_id,size_id,color_id,sku,stock,price,sale_price,image',
                 'variants.color:id,name',
                 'variants.size:id,name',
                 'brand:id,name',
@@ -381,7 +387,7 @@ class ProductApi extends Controller
     {
         $products = Product::query()
             ->with([
-                'variants:id,product_id,size_id,color_id,sku,stock,price,sale,image',
+                'variants:id,product_id,size_id,color_id,sku,stock,price,sale_price,image',
                 'variants.color:id,name',
                 'variants.size:id,name',
                 'brand:id,name',
@@ -594,7 +600,21 @@ class ProductApi extends Controller
                     'image' => $variant['image'] ?? null,
                     'status' => $variant['status'] ?? null,
                 ]);
-            } DB::commit();
+            }
+
+            DB::commit();
+
+            // Send new product notification to all users
+            try {
+                \App\Http\Controllers\NotificationController::sendToAllUsers(
+                    "🔥 Siêu phẩm mới vừa cập bến: {$product->name}!",
+                    "Bộ sưu tập SaigonShoes vừa ra mắt mẫu giày {$product->name} cực hot. Khám phá ngay!",
+                    "system",
+                    "/products"
+                );
+            } catch (\Exception $e) {
+                // Ignore notification error if any
+            }
 
             return response()->json([
                 'success' => true,
@@ -699,7 +719,7 @@ class ProductApi extends Controller
                             'color_id' => $variant['color_id'],
                             'stock' => $variant['stock'] ?? 0,
                             'price' => $variant['price'],
-                            'sale' => $variant['sale'] ?? null,
+                            'sale_price' => $variant['sale_price'] ?? null,
                             'image' => $variant['image'] ?? $existingVariant->image,
                             'status' => $variant['status'] ?? $existingVariant->status,
                         ]);
@@ -708,7 +728,7 @@ class ProductApi extends Controller
                 } else {
                     do {
                         $autoSku = strtoupper($productCode.'-'.$colorCode.'-'.$sizeCode.'-'.Str::random(4));
-                        $skuExists = Variant::query()->where(['sku' => $autoSku])->exists();
+                        $skuExists = Variant::query()->where('sku', '=', $autoSku, 'and')->exists();
                     } while ($skuExists);
 
                     $newVariant = Variant::create([
@@ -718,7 +738,7 @@ class ProductApi extends Controller
                         'stock' => $variant['stock'] ?? 0,
                         'sku' => $autoSku,
                         'price' => $variant['price'],
-                        'sale' => $variant['sale'] ?? null,
+                        'sale_price' => $variant['sale_price'] ?? null,
                         'image' => $variant['image'] ?? null,
                         'status' => $variant['status'] ?? null,
                     ]);
@@ -726,7 +746,7 @@ class ProductApi extends Controller
                 }
             }
             $variantsToDelete = Variant::query()
-                ->where('product_id', $product->id)
+                ->where('product_id', '=', $product->id, 'and')
                 ->whereNotIn('id', $keepVariantIds)
                 ->get();
 
@@ -892,8 +912,8 @@ class ProductApi extends Controller
                     continue;
                 }
 
-                $catExists = Category::query()->where(['id' => $prodData['category_id']])->exists();
-                $brandExists = Brand::query()->where(['id' => $prodData['brand_id']])->exists();
+                $catExists = Category::query()->where('id', '=', $prodData['category_id'], 'and')->exists();
+                $brandExists = Brand::query()->where('id', '=', $prodData['brand_id'], 'and')->exists();
 
                 if (! $catExists) {
                     $errors[] = "Dòng {$rowNum} ('{$name}'): Danh mục ID {$prodData['category_id']} không tồn tại";
@@ -940,7 +960,7 @@ class ProductApi extends Controller
 
                     do {
                         $autoSku = strtoupper($productCode . '-' . $colorCode . '-' . $sizeCode . '-' . Str::random(4));
-                        $skuExists = Variant::query()->where(['sku' => $autoSku])->exists();
+                        $skuExists = Variant::query()->where('sku', '=', $autoSku, 'and')->exists();
                     } while ($skuExists);
 
                     Variant::create([
@@ -950,7 +970,7 @@ class ProductApi extends Controller
                         'stock' => $stock,
                         'sku' => $autoSku,
                         'price' => $price,
-                        'sale' => $vData['sale'] ?? null,
+                        'sale_price' => $vData['sale_price'] ?? null,
                         'image' => $vData['image'] ?? null,
                         'status' => 1,
                     ]);
@@ -987,5 +1007,30 @@ class ProductApi extends Controller
         }
     }
 
+    public function toggleStatus(int $id)
+    {
+        $product = Product::find($id);
+        if (!$product) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy sản phẩm!',
+            ], 404);
+        }
+
+        $newStatus = ((int)$product->status === 1) ? 0 : 1;
+        $product->status = $newStatus;
+        $product->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $newStatus === 1 ? 'Đã kích hoạt sản phẩm!' : 'Đã tạm khóa sản phẩm!',
+            'status' => $newStatus,
+        ], 200);
+    }
+
+    public function togglecate(int $id)
+    {
+        return $this->toggleStatus($id);
+    }
 
 }

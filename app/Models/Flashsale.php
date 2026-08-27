@@ -18,9 +18,9 @@ class Flashsale extends Model
     protected $fillable = ['name', 'start_time', 'end_time', 'status','deleted_at'];
     protected $appends = ['date', 'timeSlot', 'discountPercent'];
 
-    public function items()
+    public function variants()
     {
-        return $this->hasMany(Flashsaleitem::class, 'flash_sale_id');
+        return $this->hasMany(Variant::class, 'flash_sale_id');
     }
 
     public function getDateAttribute()
@@ -39,10 +39,12 @@ class Flashsale extends Model
 
     public function getDiscountPercentAttribute()
     {
-        if ($this->relationLoaded('items')) {
-            $firstItem = $this->items->first();
+        if ($this->relationLoaded('variants')) {
+            $firstVariant = $this->variants->first();
 
-            return $firstItem ? (int) $firstItem->discount_value : 0;
+            return $firstVariant && $firstVariant->price > 0 && $firstVariant->sale_price > 0
+                ? (int) round((($firstVariant->price - $firstVariant->sale_price) / $firstVariant->price) * 100)
+                : 0;
         }
 
         return 0;

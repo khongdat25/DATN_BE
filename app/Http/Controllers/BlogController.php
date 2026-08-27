@@ -25,17 +25,18 @@ class BlogController extends Controller
         $query = Blogs::query();
 
         if ($request->has('featuring')) {
-            $query->where('featuring', filter_var($request->input('featuring'), FILTER_VALIDATE_BOOLEAN));
+            $query->where('featuring', '=', filter_var($request->input('featuring'), FILTER_VALIDATE_BOOLEAN), 'and');
         }
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%'.$request->input('search').'%');
+            $query->where('name', 'like', '%'.$request->input('search').'%', 'and');
         }
 
         $query->orderBy('created_at', 'desc');
 
-        $limit = $request->input('limit', 10);
-        $blogs = $query->paginate($limit);
+        $limit = (int) $request->input('limit', 10);
+        $page = (int) $request->input('page', 1);
+        $blogs = $query->paginate($limit, ['*'], 'page', $page);
 
         return response()->json([
             'success' => true,

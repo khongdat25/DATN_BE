@@ -23,10 +23,10 @@ class SizeController extends Controller
           $size = Size::query();
 
         if($request->filled('q')) {
-                $size->where('name', 'like', '%' . $request->q . '%');
+                $size->where('name', 'like', '%' . $request->q . '%', 'and');
         }
          if ($request->filled('status')) {
-                $size->where('status', $request->status);
+                $size->where('status', '=', $request->status, 'and');
             }
         if ($request->filled('sort')) {
                 if ($request->sort == 'asc') {
@@ -40,7 +40,7 @@ class SizeController extends Controller
         [
             'success' => true,
             'message' => 'hiển bị và lọc size',
-            'data' => $size->get(),
+            'data' => $size->get(['*']),
             
         ],200);
     }

@@ -21,7 +21,8 @@ class CartController extends Controller
     {
         $user = $request->user();
         $items = Cart::query()->with([
-            'variant:id,product_id,price,sale,color_id,size_id,image',
+            'variant:id,product_id,price,sale_price,flash_sale_id,color_id,size_id,image',
+            'variant.flashSale',
             'variant.product:id,name,slug,images,brand_id',
             'variant.product.brand:id,name',
             'variant.color:id,name',

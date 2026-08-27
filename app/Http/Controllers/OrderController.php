@@ -111,6 +111,36 @@ class OrderController extends Controller
         try {
             $order->save();
 
+            // Send order status update notification to customer
+            if ($order->user_id) {
+                $statusTitles = [
+                    'pending' => 'Đơn hàng #SGS-' . $order->id . ' đang được chuẩn bị 📦',
+                    'shipping' => 'Đơn hàng #SGS-' . $order->id . ' đang được vận chuyển! 🚚',
+                    'delivered' => 'Đơn hàng #SGS-' . $order->id . ' đã giao thành công! 🎉',
+                    'cancelled' => 'Đơn hàng #SGS-' . $order->id . ' đã bị hủy ❌',
+                ];
+                $statusBodies = [
+                    'pending' => 'Cửa hàng đã xác nhận và đang đóng gói sản phẩm của bạn.',
+                    'shipping' => 'Đơn vị vận chuyển đã tiếp nhận và đang trên đường giao đến địa chỉ của bạn.',
+                    'delivered' => 'Đơn hàng đã được giao thành công. Đừng quên đánh giá sản phẩm nhé!',
+                    'cancelled' => 'Rất tiếc, đơn hàng #SGS-' . $order->id . ' đã bị hủy.',
+                ];
+
+                if (isset($statusTitles[$request->status])) {
+                    try {
+                        \App\Http\Controllers\NotificationController::sendToUser(
+                            $order->user_id,
+                            $statusTitles[$request->status],
+                            $statusBodies[$request->status],
+                            'order',
+                            '/profile'
+                        );
+                    } catch (\Exception $e) {
+                        // Ignore notification error
+                    }
+                }
+            }
+
             if ($request->status === 'cancelled' && $oldStatus !== 'cancelled') {
                 if ($order->voucher_id) {
                     $voucher = \App\Models\Voucher::find($order->voucher_id, ['*']);
@@ -212,6 +242,7 @@ class OrderController extends Controller
             },
             'items.variant.size:id,name',
             'items.variant.color:id,name',
+            'histories.user:id,name',
         ])
             ->where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
@@ -387,6 +418,7 @@ class OrderController extends Controller
             },
             'items.variant.size:id,name',
             'items.variant.color:id,name',
+            'histories.user:id,name',
         ])
             ->where('id', $id)
             ->where('user_id', $user->id)

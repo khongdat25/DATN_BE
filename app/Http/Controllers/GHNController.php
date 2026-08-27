@@ -14,8 +14,8 @@ class GHNController extends Controller
         $env = env('GHN_ENV', 'sandbox');
 
         if ($env === 'production') {
-            $token = env('GHN_API_TOKEN');
-            $shopId = env('GHN_SHOP_ID');
+            $token = env('GHN_API_TOKEN', '');
+            $shopId = env('GHN_SHOP_ID', 0);
             $url = 'https://online-gateway.ghn.vn/shiip/public-api/';
         } else {
             // Môi trường Staging Sandbox của GHN dành cho nhà phát triển test hệ thống
@@ -238,9 +238,9 @@ class GHNController extends Controller
     /**
      * Admin bấm "Đẩy đơn sang GHN" để tạo đơn giao hàng và nhận Mã vận đơn GHN
      */
-    public function pushOrderToGHN($id)
+    public function pushOrderToGHN(int $id)
     {
-        $order = Order::with(['items.variant.product'])->find($id);
+        $order = Order::with(['items.variant.product'])->find($id, ['*']);
 
         if (!$order) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng!'], 404);
@@ -260,7 +260,7 @@ class GHNController extends Controller
         }
 
         try {
-            $items = $order->items->map(function ($item) {
+            $items = collect($order->items)->map(function ($item) {
                 return [
                     'name' => $item->variant->product->name ?? 'Sản phẩm SaigonShoes',
                     'code' => (string) ($item->variant_id ?? 'SP'),
@@ -339,7 +339,7 @@ class GHNController extends Controller
     /**
      * Tra cứu vận đơn GHN từ API thực tế & Lịch sử hành trình Real-time
      */
-    public function trackGHNOrder($code)
+    public function trackGHNOrder(string $code)
     {
         $code = trim($code);
         // Tìm đơn hàng theo ID, mã đơn #SGS-xxx hoặc mã vận đơn GHN
@@ -444,7 +444,9 @@ class GHNController extends Controller
             'status' => $currentStatus,
             'status_text' => $statusText,
             'current_location' => end($checkpoints)['location'] ?? 'Kho trung chuyển GHN',
-            'expected_delivery_date' => isset($ghnData['leadtime']) ? date('d/m/Y', $ghnData['leadtime']) : date('d/m/Y', strtotime('+2 days')),
+            'expected_delivery_date' => isset($ghnData['leadtime']) && !empty($ghnData['leadtime'])
+                ? (is_numeric($ghnData['leadtime']) ? date('d/m/Y', (int)$ghnData['leadtime']) : (strtotime($ghnData['leadtime']) ? date('d/m/Y', strtotime($ghnData['leadtime'])) : date('d/m/Y', strtotime('+2 days'))))
+                : date('d/m/Y', strtotime('+2 days')),
             'receiver' => [
                 'name' => $order->name ?? $ghnData['to_name'] ?? 'Khách hàng',
                 'phone' => $order->phone ?? $ghnData['to_phone'] ?? '***',
@@ -466,9 +468,9 @@ class GHNController extends Controller
     /**
      * Admin/Hệ thống bấm "Hủy vận đơn GHN" để hủy đơn trên Giao Hàng Nhanh
      */
-    public function cancelGHNOrder($id)
+    public function cancelGHNOrder(int $id)
     {
-        $order = Order::find($id);
+        $order = Order::find($id, ['*']);
 
         if (!$order) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng!'], 404);

@@ -23,10 +23,10 @@ class BrandController extends Controller
          $brand = Brand::query();
 
         if($request->filled('q')) {
-                $brand->where('name', 'like', '%' . $request->q . '%');
+                $brand->where('name', 'like', '%' . $request->q . '%', 'and');
         }
          if ($request->filled('status')) {
-                $brand->where('status', $request->status);
+                $brand->where('status', '=', $request->status, 'and');
             }
         if ($request->filled('sort')) {
                 if ($request->sort == 'asc') {
@@ -40,7 +40,7 @@ class BrandController extends Controller
         [
             'success' => true,
             'message' => 'hiển bị và lọc thương hiệu',
-            'data' => $brand->get(),
+            'data' => $brand->get(['*']),
             
         ],200);
     }

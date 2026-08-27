@@ -85,29 +85,30 @@ class UserController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
+            $query->whereNested(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%");
-            });
+            }, 'and');
         }
 
         if ($request->filled('status') && $request->input('status') !== 'all') {
             $status = $request->input('status');
             $dbStatus = $this->mapStatusToDb($status);
-            $query->where('status', '=', $dbStatus);
+            $query->where('status', '=', $dbStatus, 'and');
         }
 
         if ($request->filled('role') && $request->input('role') !== 'all') {
             $role = $request->input('role');
             $dbRole = $this->mapRoleToDb($role);
-            $query->where('role', '=', $dbRole);
+            $query->where('role', '=', $dbRole, 'and');
         }
 
         $query->orderBy('created_at', 'desc');
 
-        $perPage = $request->input('per_page', 10);
-        $paginator = $query->paginate($perPage);
+        $perPage = (int) $request->input('per_page', 10);
+        $page = (int) $request->input('page', 1);
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
 
         $mappedUsers = collect($paginator->items())->map(function ($user) {
             return [

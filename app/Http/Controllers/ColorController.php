@@ -23,10 +23,10 @@ class ColorController extends Controller
          $color = Color::query();
 
         if($request->filled('q')) {
-                $color->where('name', 'like', '%' . $request->q . '%');
+                $color->where('name', 'like', '%' . $request->q . '%', 'and');
         }
          if ($request->filled('status')) {
-                $color->where('status', $request->status);
+                $color->where('status', '=', $request->status, 'and');
             }
         if ($request->filled('sort')) {
                 if ($request->sort == 'asc') {
@@ -40,7 +40,7 @@ class ColorController extends Controller
         [
             'success' => true,
             'message' => 'hiển bị và lọc color',
-            'data' => $color->get(),
+            'data' => $color->get(['*']),
             
         ],200);
     }

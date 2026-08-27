@@ -34,6 +34,8 @@ class RatingController extends Controller
             'order_item_id' => 'required|integer',
             'rating'        => 'required|integer|min:1|max:5',
             'comment'       => 'nullable|string|max:1000',
+            'images'        => 'nullable|array',
+            'images.*'      => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         $orderItem = OrderItem::with(['order', 'variant'])->find($request->order_item_id, ['*']);
@@ -77,12 +79,31 @@ class RatingController extends Controller
             ], 400);
         }
 
+        $storedImages = [];
+        if ($request->hasFile('images')) {
+            $uploadPath = public_path('images/reviews');
+            if (!file_exists($uploadPath)) {
+                mkdir($uploadPath, 0777, true);
+            }
+            foreach ($request->file('images') as $file) {
+                if ($file && $file->isValid()) {
+                    $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                    $file->move($uploadPath, $filename);
+                    $storedImages[] = $filename;
+                }
+            }
+        } elseif (is_array($request->input('images'))) {
+            // Support base64 or array of filenames if uploaded asynchronously
+            $storedImages = array_values(array_filter($request->input('images')));
+        }
+
         $ratingObj = rating::create([
             'user_id'       => $user->id,
             'product_id'    => $productId,
             'order_item_id' => $orderItem->id,
             'rating'        => $request->rating,
             'comment'       => $request->comment ?? '',
+            'images'        => $storedImages,
         ]);
 
         return response()->json([
@@ -174,6 +195,7 @@ class RatingController extends Controller
                 'purchaseDetails' => $purchaseDetails,
                 'date' => $r->created_at ? $r->created_at->format('d/m/Y H:i') : '',
                 'comment' => $r->comment ?: 'Không có nhận xét văn bản.',
+                'images' => $r->image_urls,
                 'status' => $r->status ?: 'pending',
                 'reply' => $r->reply,
             ];

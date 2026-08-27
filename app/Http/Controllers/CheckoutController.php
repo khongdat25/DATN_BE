@@ -92,88 +92,125 @@ class CheckoutController extends Controller
         try {
             $total = 0;
             foreach ($cartItems as $item) {
-                $price = $item->variant->price ?? 0;
+                if ($item->variant && $item->variant->product && (int)$item->variant->product->status === 0) {
+                    throw new \Exception('Sản phẩm "' . $item->variant->product->name . '" đã tạm ngưng kinh doanh, vui lòng loại bỏ khỏi giỏ hàng trước khi thanh toán!');
+                }
+                $price = $item->variant ? $item->variant->effective_price : 0;
                 $total += $price * $item->quantity;
             }
 
             $appliedVoucherId = null;
+            $appliedShippingVoucherId = null;
 
-            if (! empty($data['voucher_id'])) {
-                $voucher = \App\Models\Voucher::where('id', '=', $data['voucher_id'], 'and')
-                    ->lockForUpdate()
-                    ->first();
+            $now = \Carbon\Carbon::now();
 
-                if (! $voucher) {
-                    DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher not found for user '.$user->id);
+            // Helper closure to validate and apply a voucher
+            $validateVoucher = function ($voucherIdOrCode) use ($user, $cartItems, $total, $shippingFee, $now) {
+                if (empty($voucherIdOrCode)) return null;
 
-                    return response()->json(['message' => 'Mã giảm giá không tồn tại'], 400);
+                $query = \App\Models\Voucher::query()->lockForUpdate();
+                if (is_numeric($voucherIdOrCode)) {
+                    $query->where('id', $voucherIdOrCode);
+                } else {
+                    $query->where('code', $voucherIdOrCode);
+                }
+                $voucher = $query->first();
+
+                if (!$voucher) {
+                    throw new \Exception('Mã giảm giá không tồn tại');
                 }
 
-                $now = \Carbon\Carbon::now();
-
                 if ($voucher->status !== 'active') {
-                    DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher inactive for user '.$user->id);
-
-                    return response()->json(['message' => 'Mã giảm giá đã bị khóa hoặc không hoạt động'], 400);
+                    throw new \Exception('Mã giảm giá đã bị khóa hoặc không hoạt động');
                 }
 
                 if ($voucher->start_date && $now->startOfDay()->lt(\Carbon\Carbon::parse($voucher->start_date))) {
-                    DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher not started for user '.$user->id);
-
-                    return response()->json(['message' => 'Mã giảm giá chưa đến thời gian bắt đầu'], 400);
+                    throw new \Exception('Mã giảm giá chưa đến thời gian bắt đầu');
                 }
 
                 if ($voucher->end_date && $now->startOfDay()->gt(\Carbon\Carbon::parse($voucher->end_date))) {
-                    DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher expired for user '.$user->id);
-
-                    return response()->json(['message' => 'Mã giảm giá đã hết hạn hoặc bị khóa'], 400);
+                    throw new \Exception('Mã giảm giá đã hết hạn hoặc bị khóa');
                 }
 
                 if ($voucher->used_count >= $voucher->total_usage) {
-                    DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher fully used for user '.$user->id);
-
-                    return response()->json(['message' => 'Mã giảm giá đã hết lượt sử dụng'], 400);
+                    throw new \Exception('Mã giảm giá đã hết lượt sử dụng');
                 }
 
                 $alreadyUsed = Order::where('user_id', '=', $user->id, 'and')
-                    ->where('voucher_id', '=', $voucher->id, 'and')
                     ->where('status', '!=', 'cancelled', 'and')
-                    ->exists();
+                    ->where(function ($q) use ($voucher) {
+                        $q->where('voucher_id', '=', $voucher->id, 'and')
+                          ->orWhere('shipping_voucher_id', '=', $voucher->id, 'and');
+                    }, null, null, 'and')->exists();
 
                 if ($alreadyUsed) {
-                    DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Voucher already used by user '.$user->id);
+                    throw new \Exception('Bạn đã sử dụng mã giảm giá này rồi');
+                }
 
-                    return response()->json(['message' => 'Bạn đã sử dụng mã giảm giá này rồi'], 400);
+                $variantIds = $cartItems->pluck('variant_id')->filter()->toArray();
+                $hasFlashSaleItems = false;
+                if (!empty($variantIds)) {
+                    $hasFlashSaleItems = Variant::whereIn('id', $variantIds, 'and', false)
+                        ->whereHas('flashSale', function ($q) use ($now) {
+                            $q->where('status', '=', 1, 'and')
+                              ->where('start_time', '<=', $now, 'and')
+                              ->where('end_time', '>=', $now, 'and');
+                        })->exists();
+                }
+
+                if ($hasFlashSaleItems && $voucher->type !== 'free_ship') {
+                    throw new \Exception('Đơn hàng chứa sản phẩm Flash Sale chỉ được áp dụng mã miễn phí vận chuyển!');
                 }
 
                 if ($total < $voucher->min_order) {
-                    DB::rollBack();
-                    \Illuminate\Support\Facades\Log::warning('Checkout failed: Order total less than min_order for user '.$user->id);
-
-                    return response()->json(['message' => 'Đơn hàng chưa đạt giá trị tối thiểu để sử dụng mã này'], 400);
+                    throw new \Exception('Đơn hàng chưa đạt giá trị tối thiểu để sử dụng mã này');
                 }
 
-                $discount = 0;
-                if ($voucher->type === 'percent') {
-                    $discount = ($total * $voucher->value) / 100;
-                    if ($voucher->max_discount && $discount > $voucher->max_discount) {
-                        $discount = $voucher->max_discount;
+                return $voucher;
+            };
+
+            // 1. Process Order Discount Voucher (percent / fixed)
+            $orderVoucherId = $request->input('voucher_id') ?: $request->input('voucher_code');
+            if ($orderVoucherId) {
+                try {
+                    $vObj = $validateVoucher($orderVoucherId);
+                    if ($vObj) {
+                        $discount = 0;
+                        if ($vObj->type === 'percent') {
+                            $discount = ($total * $vObj->value) / 100;
+                            if ($vObj->max_discount && $discount > $vObj->max_discount) {
+                                $discount = $vObj->max_discount;
+                            }
+                        } elseif ($vObj->type === 'fixed') {
+                            $discount = $vObj->value;
+                        } elseif ($vObj->type === 'free_ship') {
+                            $discount = min($shippingFee, $vObj->value);
+                        }
+                        $total = max(0, $total - $discount);
+                        $vObj->increment('used_count');
+                        $appliedVoucherId = $vObj->id;
                     }
-                } elseif ($voucher->type === 'fixed') {
-                    $discount = $voucher->value;
-                } elseif ($voucher->type === 'free_ship') {
-                    $discount = min($shippingFee, $voucher->value);
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    return response()->json(['message' => $e->getMessage()], 400);
                 }
+            }
 
-                $total = max(0, $total - $discount);
-                $voucher->increment('used_count');
-                $appliedVoucherId = $voucher->id;
+            // 2. Process Shipping Voucher (free_ship)
+            $shippingVoucherId = $request->input('shipping_voucher_id') ?: $request->input('shipping_voucher_code');
+            if ($shippingVoucherId && $shippingVoucherId != $orderVoucherId) {
+                try {
+                    $sVObj = $validateVoucher($shippingVoucherId);
+                    if ($sVObj) {
+                        $shipDiscount = min($shippingFee, $sVObj->value);
+                        $shippingFee = max(0, $shippingFee - $shipDiscount);
+                        $sVObj->increment('used_count');
+                        $appliedShippingVoucherId = $sVObj->id;
+                    }
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    return response()->json(['message' => $e->getMessage()], 400);
+                }
             }
 
             $total += $shippingFee;
@@ -197,6 +234,7 @@ class CheckoutController extends Controller
                 'note' => $data['note'] ?? null,
                 'total_amount' => $total,
                 'voucher_id' => $appliedVoucherId,
+                'shipping_voucher_id' => $appliedShippingVoucherId,
                 'payment_method_id' => $data['payment_method_id'] ?? null,
                 'payment_status' => 'pending',
                 'status' => ($isQrPayment && $clientId) ? 'pending' : 'new',
@@ -224,7 +262,7 @@ class CheckoutController extends Controller
                     ], 400);
                 }
 
-                $price = $variant->price ?? 0;
+                $price = $variant->effective_price;
 
                 OrderItem::create([
                     'order_id' => $order->id,
@@ -284,6 +322,19 @@ class CheckoutController extends Controller
             }
 
             DB::commit();
+
+            // Send notification to user
+            try {
+                \App\Http\Controllers\NotificationController::sendToUser(
+                    $user->id,
+                    "Đơn hàng mới #SGS-{$order->id} đã khởi tạo! 🛒",
+                    "Đơn hàng của bạn trị giá " . number_format($total, 0, ',', '.') . "đ đã được khởi tạo thành công.",
+                    "order",
+                    "/profile"
+                );
+            } catch (\Exception $e) {
+                // Ignore notification error if any
+            }
 
             $responsePayload = ['data' => $order];
             if ($payOSResponse) {

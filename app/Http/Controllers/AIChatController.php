@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ProductModel;
+use App\Models\Product;
 use App\Models\AiSetting;
 use App\Models\AiLog;
 use Illuminate\Http\Request;
@@ -67,7 +67,7 @@ class AIChatController extends Controller
         $storeAddress = $setting->store_address ?? "";
 
         // 1. Lấy danh sách sản phẩm đang mở bán để làm ngữ cảnh dữ liệu cho AI
-        $products = ProductModel::query()
+        $products = Product::query()
             ->where('status', 1)
             ->with(['brand:id,name', 'category:id,name', 'variants:id,product_id,price,sale,image,size_id', 'variants.size:id,name'])
             ->withAvg('rating as avg_rating', 'rating')
@@ -177,7 +177,7 @@ EOT;
         // 5. Lấy thông tin chi tiết sản phẩm được gợi ý từ CSDL
         $recommendedProducts = [];
         if (!empty($recommendedProductIds)) {
-            $recommendedProducts = ProductModel::whereIn('id', array_values($recommendedProductIds), 'and', false)
+            $recommendedProducts = Product::whereIn('id', array_values($recommendedProductIds), 'and', false)
                 ->with(['variants:id,product_id,price,sale,image'])
                 ->get(['id', 'name', 'slug', 'images']);
 

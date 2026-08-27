@@ -24,11 +24,11 @@ class Category extends Model
 
     public function products()
     {
-        return $this->hasMany(ProductModel::class);
+        return $this->hasMany(Product::class);
     }
 
     public function variants()
     {
-        return $this->hasManyThrough(Variant::class, ProductModel::class, 'category_id', 'product_id');
+        return $this->hasManyThrough(Variant::class, Product::class, 'category_id', 'product_id');
     }
 }

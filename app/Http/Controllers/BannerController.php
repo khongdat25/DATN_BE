@@ -25,15 +25,15 @@ class BannerController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
+            $query->whereNested(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
                   ->orWhere('position', 'like', "%{$search}%")
                   ->orWhere('link', 'like', "%{$search}%");
-            });
+            }, 'and');
         }
 
         if ($request->filled('status') && $request->status !== 'all') {
-            $query->where(['status' => $request->status]);
+            $query->where('status', '=', $request->status, 'and');
         }
 
         $banners = $query->orderBy('id', 'desc')->get();
@@ -56,7 +56,7 @@ class BannerController extends Controller
     public function publicIndex()
     {
         $banners = Banners::query()
-            ->where(['status' => 'active'])
+            ->where('status', '=', 'active', 'and')
             ->orderBy('id', 'desc')
             ->get();
 

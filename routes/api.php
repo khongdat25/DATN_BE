@@ -21,9 +21,11 @@ use App\Http\Controllers\BrandController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\BannerController;
+use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReceiptController;
 use App\Models\Order;
-use App\Models\ProductModel;
+use App\Models\Product;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -41,8 +43,8 @@ use Illuminate\Support\Facades\Route;
 |
 */ /*test */
 
-route::post('/update-stock', [ReceiptController::class, 'updateStock']);
-route::get('/stock-log/{id}', [ReceiptController::class, 'checkReceipts']);
+// route::post('/update-stock', [ReceiptController::class, 'updateStock']);
+// route::get('/stock-log/{id}', [ReceiptController::class, 'checkReceipts']);
 
 // lấy tên brand + category
 Route::get('/getbrands', [ProductController::class, 'getBrands']);
@@ -111,6 +113,17 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/vouchers/apply', [VoucherController::class, 'applyVoucher']);
 
 
+    // Yêu thích (Wishlist / Favorite)
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/wishlist/toggle', [WishlistController::class, 'toggle']);
+    Route::delete('/wishlist/clear', [WishlistController::class, 'clear']);
+    Route::delete('/wishlist/{productId}', [WishlistController::class, 'destroy']);
+
+    // Thông báo (Notifications)
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+
     // Đơn hàng (Orders) cho User
     Route::get('/user/orders', [OrderController::class, 'userIndex']);
     Route::get('/user/orders/{id}', [OrderController::class, 'userShow']);
@@ -127,6 +140,8 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/product_edit/{id}', [ProductController::class, 'product_edit']);
     Route::post('/product_import_excel', [ProductController::class, 'importExcel']);
     Route::patch('/product/toggle-featured/{id}', [ProductController::class, 'toggleFeatured']);
+    Route::patch('/product/toggle-status/{id}', [ProductController::class, 'toggleStatus']);
+    Route::patch('/product/toggle-cate/{id}', [ProductController::class, 'toggleStatus']);
     Route::delete('/product/{id}', [ProductController::class, 'product_delete']);
     Route::delete('/variant/{v}', [ProductController::class, 'variant_delete']);
     Route::post('/upload', [ProductController::class, 'uploadImage']);

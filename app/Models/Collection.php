@@ -33,7 +33,7 @@ class Collection extends Model
 
     public function products()
     {
-        return $this->belongsToMany(ProductModel::class, 'collection_product', 'collection_id', 'product_id')->withTimestamps();
+        return $this->belongsToMany(Product::class, 'collection_product', 'collection_id', 'product_id')->withTimestamps();
     }
 
     public function getBannerUrlAttribute()
