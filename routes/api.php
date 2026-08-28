@@ -59,6 +59,7 @@ Route::get('/hotproducts', [ProductController::class, 'HotProduct']);
 Route::get('/product/{slug}', [ProductController::class, 'Detail']);
 Route::get('/search', [ProductController::class, 'Search']);
 Route::post('/ai/chat', [AIChatController::class, 'chat']);
+Route::get('/ai/suggestions', [AIChatController::class, 'getSuggestions']);
 
 // GHN Express API
 Route::get('/ghn/provinces', [GHNController::class, 'getProvinces']);

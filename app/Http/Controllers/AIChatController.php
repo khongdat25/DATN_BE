@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\AiSetting;
 use App\Models\AiLog;
+use App\Models\AiSuggestion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -69,7 +70,7 @@ class AIChatController extends Controller
         // 1. Lấy danh sách sản phẩm đang mở bán để làm ngữ cảnh dữ liệu cho AI
         $products = Product::query()
             ->where('status', 1)
-            ->with(['brand:id,name', 'category:id,name', 'variants:id,product_id,price,sale,image,size_id', 'variants.size:id,name'])
+            ->with(['brand:id,name', 'category:id,name', 'variants:id,product_id,price,sale_price,image,size_id', 'variants.size:id,name'])
             ->withAvg('rating as avg_rating', 'rating')
             ->take(25)
             ->get(['id', 'name', 'slug', 'sold', 'category_id', 'brand_id', 'images', 'description']);
@@ -178,7 +179,7 @@ EOT;
         $recommendedProducts = [];
         if (!empty($recommendedProductIds)) {
             $recommendedProducts = Product::whereIn('id', array_values($recommendedProductIds), 'and', false)
-                ->with(['variants:id,product_id,price,sale,image'])
+                ->with(['variants:id,product_id,price,sale_price,image'])
                 ->get(['id', 'name', 'slug', 'images']);
 
             $recommendedProducts->transform(function ($item) {
@@ -193,7 +194,7 @@ EOT;
                     'id' => $item->id,
                     'name' => $item->name,
                     'slug' => $item->slug,
-                    'price' => $firstVar ? ($firstVar->sale ?? $firstVar->price) : 0,
+                    'price' => $firstVar ? ($firstVar->sale_price ?? $firstVar->price) : 0,
                     'image' => $img ? (str_starts_with($img, 'http') ? $img : url('images/' . $img)) : null,
                 ];
             });
@@ -305,5 +306,21 @@ EOT;
         return "Chào bạn! SaigonShoes AI luôn sẵn sàng hỗ trợ bạn 👟✨\n" .
                "• Bạn có thể nhập chiều dài chân (ví dụ: *'chân 43 hay mua 44'*) để mình tư vấn **Size chuẩn xác nhất**.\n" .
                "• Hoặc yêu cầu tư vấn phối đồ phong cách (*'mặc sơ mi trắng mang giày gì'*, *'giày phong cách Streetwear'*...).";
+    }
+
+    /**
+     * Lấy danh sách nút câu hỏi gợi ý nhanh cho khách hàng
+     */
+    public function getSuggestions()
+    {
+        $suggestions = AiSuggestion::query()
+            ->where('active', true)
+            ->orderBy('sort_order', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $suggestions
+        ]);
     }
 }
